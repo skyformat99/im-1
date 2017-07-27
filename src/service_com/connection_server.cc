@@ -106,6 +106,7 @@ void ConnectionServer::OnDisconn(int _sockfd) {
 
 	int userid = 0;
 	if (!find_userid_by_sockfd(_sockfd, userid, true)) {
+		LOGE("not find sockfd:%d", _sockfd);
 		return;
 	}
 	ClientObject client;
@@ -176,6 +177,7 @@ int ConnectionServer::PreProcessPack(int _sockfd, int _userid, PDUBase &_base) {
 		else if (status == OnlineStatus_Connect) {
 			if (old_user_sockfd != 0 && old_user_sockfd != _sockfd) {
 				CloseFd(old_user_sockfd);
+				std::lock_guard<std::recursive_mutex> lock_1(socket_userid_mutex_);
 				socket_userid_.erase(old_user_sockfd);
 				
 				LOGT("断线重连，关闭假死FD; user[user_id:%d; phone:%s],oldfd:%d; newfd:%d;", _userid, client.phone_.c_str(), old_user_sockfd, _sockfd);
