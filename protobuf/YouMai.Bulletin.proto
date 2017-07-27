@@ -1,0 +1,44 @@
+syntax = "proto2";
+package com.proto.bulletin;
+import "YouMai.Basic.proto" ;
+ 
+enum Bulletin_Type {
+    Bulletin_Type_SystemBulletin = 1;
+}
+ 
+enum Bulletin_Target{
+    Bulletin_Target_AllBussiness = 1;
+    Bulletin_Target_AllComsumer = 2;
+}
+ 
+message Bulletin{
+    optional int32 bulletin_id = 1 ;
+    optional string content = 2 ;
+    optional int32 publish_time = 3 ;
+    optional int32 publisher_id = 4 ;
+    optional Bulletin_Type bulletin_type = 5 ;
+    optional string title = 6 ;
+    optional string publisher_name = 7 ;
+    optional Bulletin_Target targets = 8 ;
+    optional string publisher_phone = 9;
+    //optional Bulletin_Type bulletin_type = 9 ;
+}
+ 
+ 
+ 
+message Bulletin_Publish{
+    optional string content = 1 ;
+    optional int32 publisher_id = 2 ;
+    optional Bulletin_Type bulletin_type = 3 ;
+    optional string title = 4 ;
+    optional string publisher_name = 5 ;
+    optional Bulletin_Target targets = 6 ;
+}
+message Bulletin_Publish_Ack{
+    optional com.proto.basic.ERRNO_CODE   errer_no = 1;
+}
+ 
+ 
+message Bulletin_Notify{
+    repeated Bulletin bulletins = 1 ;
+}

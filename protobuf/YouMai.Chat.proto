@@ -1,0 +1,74 @@
+//@xiesong.4.11.2016
+
+syntax = "proto2";
+package com.proto.chat;
+
+import "YouMai.Basic.proto";
+
+enum IM_CHANNEL{
+    IM_CHANNEL_DEFAULT = 0;
+    IM_CHANNEL_SMS = 1;
+    IM_CHANNEL_QQ = 2;
+}
+
+enum IM_CONTENT_TYPE{
+	IM_CONTENT_TYPE_TEXT = 0;
+	IM_CONTENT_TYPE_SHORT_MESSAGE = 1 ;
+	IM_CONTENT_TYPE_CONTACTS = 2 ;
+	IM_CONTENT_TYPE_RECOMMEND_APP = 3 ;
+	IM_CONTENT_TYPE_NO_DISTURB = 4 ;
+	IM_CONTENT_TYPE_LOCATIONSHARE = 5 ;
+
+	IM_CONTENT_TYPE_IMAGE = 6 ;
+	IM_CONTENT_TYPE_AT = 7 ;
+	IM_CONTENT_TYPE_URL = 8 ;
+	IM_CONTENT_TYPE_AUDIO = 9 ;
+	IM_CONTENT_TYPE_VIDEO = 10 ;
+	IM_CONTENT_TYPE_LOCATION = 11 ;
+	IM_CONTENT_TYPE_FILE =  12;
+	IM_CONTENT_TYPE_BIZCARD = 13;
+	IM_CONTENT_TYPE_KAQUAN = 14;
+}
+
+message IMChat_Personal{
+    optional int32	command_id = 1;
+    optional int32	timestamp = 2;
+    optional int32	send_crc = 3;
+    optional int32	version = 4;
+    optional int64  msg_id = 5;
+
+    optional int32	src_usr_id = 6;
+    optional string src_phone = 7;
+    optional string src_name = 8;
+    optional int32	src_user_type = 9;
+
+    optional int32	target_user_id = 10;
+    optional string target_phone = 11;
+    optional string target_name = 12;
+    optional int32	target_user_type =13;
+    // 0:transmit 1:not transmit
+    optional IM_CHANNEL  im_channel = 14;
+    optional string body = 15 ;
+    optional int32 content_type = 16 ;//binary operation. binary operation together with IM_CONTENT_TYPE
+    optional int32 parentid = 17;
+}
+
+message IMChat_Personal_Notify{
+    optional IMChat_Personal imchat = 1;
+}
+
+message IMChat_Personal_Ack{
+    optional int32     src_usr_id = 1;
+    optional int64     msg_id = 2;
+    optional com.proto.basic.ERRNO_CODE  errer_no = 3;
+    optional int32 command_id = 4;      //
+    optional bool is_target_online = 5;
+}
+
+message IMChat_Personal_recv_Ack{
+    optional int32      user_id=1;
+    optional uint64     msg_id = 2;
+    optional int32 command_id = 3;      
+    
+}
+

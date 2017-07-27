@@ -1,0 +1,22 @@
+//@xiesong 4.20.2016
+//songtzu@126.com
+
+syntax = "proto2";
+
+
+package com.proto.transfer ;
+
+//import "YouMai.Basic.proto";
+
+
+
+
+message TransferBroadcastNotify {
+    repeated int32   user_id_list = 1;
+	optional string           msg_id=2;
+	optional bytes          body=3;
+	optional int32            expire=4;
+	optional int32            command_id=5;
+	optional int32            send_time=6;
+}
+

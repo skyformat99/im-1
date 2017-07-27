@@ -1,0 +1,92 @@
+//@xiesong 4.20.2016
+//songtzu@126.com
+
+syntax = "proto2";
+
+
+package com.proto.route ;
+
+import "YouMai.Basic.proto";
+
+
+enum ROUTE_TYPE {
+    ROUTETYPE_DEFAULT = 0 ;
+    ROUTETYPE_WELLKNOWN_USER = -1;
+    ROUTETYPE_PROXY_USER = -2;
+    ROUTETYPE_UNLOGIN = -3;
+}
+
+message Regist_CommunicationService {
+    optional string ip = 1;
+    optional int32 port = 2;
+    optional com.proto.basic.ServiceType service_type = 3;
+}
+
+message RegistRsp{
+   optional int32  node_id =1;
+  optional   int32  result=2;  //0:fail 1:success
+}
+message ServiceInfo {
+   optional string ip = 1;
+   optional int32 port = 2;
+   optional com.proto.basic.ServiceType service_type = 3;
+   optional int32  id=4;
+}
+
+message RouteBroadcast {
+    repeated ServiceInfo service_list=1;
+}
+
+message Route_Req {
+    repeated int32 targets = 1;
+    optional int32 commandid = 2;
+
+    //optional int32 real_length = 3 ;
+    optional bytes route_obj =3 ;                   //this is the full data package, include PDU header & proto data.
+    optional string sessionid = 4 ;
+    optional com.proto.basic.COMMANDID session_type =5 ;
+    optional bool is_offline_storage = 6  [default = false] ;
+
+    optional ROUTE_TYPE route_type = 7 [default = ROUTETYPE_DEFAULT];
+    optional int32 extended = 8 ;
+
+}
+
+message Route_OnlineCheck {
+    optional int32 user_id = 1;
+    optional string phone = 2;
+}
+
+message Route_OnlineCheck_Ack{
+    optional bool is_online = 1 [default = false];
+}
+
+message Route_PhoneCheck {
+    optional int32 user_id = 1;
+}
+
+message Route_PhoneCheck_Ack {
+    optional string phone = 1;
+}
+
+
+message Broadcast_Notify {
+    optional int32 channel_id = 1;
+	optional int64   msg_id=2;
+    optional int32   expire=3;
+}
+message RouteSyncUserStateReq{
+	optional int32    node_id=1;
+}
+
+message RouteSyncUserStateRsp{
+    repeated RouteUserState user_state_list=1;
+}
+message RouteUserState{
+	optional int32       user_id=1;
+	optional com.proto.basic.UserState state=2;
+	optional int32         node_id = 3;
+}
+message RouteUsersStateBroadcast{
+   repeated RouteUserState user_state_list=2;
+}

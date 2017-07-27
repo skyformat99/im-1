@@ -1,0 +1,57 @@
+//@xiesong.4.11.2016
+
+syntax = "proto2";
+
+package com.proto.user ;
+import "YouMai.Basic.proto";
+
+message User_Login {
+	optional int32 user_id = 1;
+	optional string device_id = 2;
+	optional string phone = 3 ;
+	optional string pwd = 4 ;
+    optional com.proto.basic.Device_Type device_type = 5;
+	optional string session_id = 6;
+	optional string appkey = 7;
+    optional int32 version=8;
+}
+
+message User_Login_Ack {
+    optional int32 src_usr_id = 1;
+    optional com.proto.basic.ERRNO_CODE errer_no = 2;
+    optional int64 msg_id = 3;
+    optional string error = 4;
+}
+
+message Multi_Device_Kicked_Notify {
+	optional int32 timestamp =1;
+    optional com.proto.basic.Device_Type new_device = 2 ;
+    optional int32 user_id = 3;
+	optional string new_device_id = 4 ;
+}
+
+message User_LogOff {
+	optional int32	user_id = 1;
+	optional string	device_id = 2;
+}
+
+message User_LogOff_Ack {
+	optional int32 src_usr_id = 1;
+    optional com.proto.basic.ERRNO_CODE errer_no = 2;
+	optional int64 msg_id = 3;
+	optional string error = 4;
+}
+
+message User_Info {
+	optional int32	user_id =  1;
+	optional string phone  = 2 ;
+	optional int32  user_show_level = 3 ;
+	optional int32  user_type =  4;
+	optional bool   is_black_list_open = 5 ;
+	optional bool   is_white_list_open = 6 ;
+	optional int32	io = 7;
+	optional int32	state = 8;
+	optional int32	dst_user_id = 9;
+	optional int64  msgid = 10;
+}
+
