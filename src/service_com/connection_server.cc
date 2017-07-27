@@ -807,6 +807,9 @@ int ConnectionServer::BuildUserCacheInfo(int _sockfd, User_Login& _login,int ver
     }
     {
         std::lock_guard<std::recursive_mutex> lock_1(user_map_mutex_);
+		if (OnlineStatus_Connect == get_user_state(client.userid_)) {
+			LOGD("reconnect login user[user_id:%d ,phone:%s", client.userid_, client.phone_);
+		}
         user_map_[_login.user_id()] = client;
     }
 	RegistUserToRoute(client);
@@ -989,6 +992,16 @@ void ConnectionServer::set_user_state(int _userid, OnlineStatus state)
 		it->second.online_status_ = state;
 	}
 	
+}
+
+int ConnectionServer::get_user_state(int _userid)
+{
+	std::lock_guard<std::recursive_mutex> lock_1(user_map_mutex_);
+	auto it = user_map_.find(_userid);
+	if (it != user_map_.end()) {
+		return it->second.online_status_;
+	}
+	return OnlineStatus_Offline;
 }
 
 uint64_t ConnectionServer::getMsgId()

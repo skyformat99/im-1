@@ -104,10 +104,9 @@ private:
     bool find_userid_by_sockfd(int _sockfd, int &_userid, bool is_del = false);
     bool find_client_by_userid(int _userid, ClientObject &_client, bool is_set_offline = false);
 	void set_user_state(int _userid, OnlineStatus state);
-
+	int get_user_state(int _userid);
 	uint64_t getMsgId();
 
-	void save_send_msg(int _userid, PDUBase& _base, uint64_t msg_id);
 	bool need_send_msg(int _userid, int _sockfd, PDUBase & _base, uint64_t msg_id);
 	
 	
