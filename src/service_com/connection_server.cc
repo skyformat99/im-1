@@ -274,9 +274,9 @@ void ConnectionServer::ProcessUserLogin(int _sockfd, PDUBase& _base) {
 	if (login_result == ERRNO_CODE_OK) {
 		ResendFailedPack(_sockfd, login.user_id());
 		ConsumeHistoryMessage(login.user_id());
+		++onliners_;
 	}
-	++onliners_;
-
+	
 	//LOGD("回复登录结果 %d", login_result);
 	User_Login_Ack login_ack;
 	login_ack.set_errer_no((ERRNO_CODE)login_result);

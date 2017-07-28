@@ -59,7 +59,7 @@ public:
 	int                       pkt_len;
 
 	//for send
-	IMQueue<msg_t>           out_buffer;//store send data
+	IMQueue<msg_t>            out_buffer;//store send data
 	bool                      cache;
 
 	msg_t                     out_pkt;   //store a pkt

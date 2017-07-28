@@ -164,7 +164,7 @@ private:
 	int                         m_node_id_;
 	std::recursive_mutex        m_msgid_mutex_;
 	int                         m_cur_index_;
-	int                         m_lastTime;
+	time_t                      m_lastTime;
 
 	//stastic
 	atomic_ullong               m_total_recv_pkt;
