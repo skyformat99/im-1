@@ -808,7 +808,7 @@ int ConnectionServer::BuildUserCacheInfo(int _sockfd, User_Login& _login,int ver
     {
         std::lock_guard<std::recursive_mutex> lock_1(user_map_mutex_);
 		if (OnlineStatus_Connect == get_user_state(client.userid_)) {
-			LOGD("reconnect login user[user_id:%d ,phone:%s", client.userid_, client.phone_);
+			LOGD("relogin user[user_id:%d ,phone:%s", client.userid_, client.phone_.c_str());
 		}
         user_map_[_login.user_id()] = client;
     }
