@@ -3,6 +3,7 @@
 #include <YouMai.User.pb.h>
 #include <YouMai.Basic.pb.h>
 #include <YouMai.Chat.pb.h>
+#include <map>
 using namespace std;
 using namespace com::proto::basic;
 using namespace com::proto::user;
@@ -25,7 +26,7 @@ public:
 	virtual void OnSendFailed(PDUBase &_data);
 	void loginAck(PDUBase & _base);
 	void chatMsg(int _sockfd,PDUBase& _base);
-    void bulletin(PDUBase& _base);
+    void bulletin(int sockfd_,PDUBase& _base);
 	void OnLogin(int _sockfd);
 	int getRecvPkt();
 	int getLogin();
@@ -34,5 +35,6 @@ private:
 	int    m_login;
 	int total_recv_pkts;
 	int sec_recv_pkts;
+    map<int,int> m_sock_userid;
 
 };

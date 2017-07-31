@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <iterator>
 using namespace std;
-#define IP   "192.168.0.42"
+#define IP   "192.168.17.130"
 #define PORT  8003
 
 
@@ -21,13 +21,13 @@ void SyncUserData(std::list<std::string>& _keys) {
 	if (_keys.size() == 0) return;
 
 	for (auto it = _keys.begin(); it != _keys.end(); it++) {
-        //if(num++==2200){
-          //  break;
-       // }
+        if(num++==2200){
+            break;
+        }
 		std::string phone = (*it).substr((*it).find(":") + 1);;
 		std::string userid = redis_client.GetUserId(phone);
 		if (userid != "") {
-		//	user_phone_[atoi(userid.c_str())] = phone;
+			//user_phone_[atoi(userid.c_str())] = phone;
 			User* user = new User;
 			user->id = atoi(userid.c_str());
             if(user->id==29845407){

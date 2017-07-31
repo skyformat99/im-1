@@ -43,7 +43,7 @@ void IMClient::OnRecv(int _sockfd, PDUBase * _base)
 		break;
     case BULLETIN_NOTIFY:
        printf("recv cmd:%d\n",_base->command_id);
-        bulletin(*_base);
+        bulletin(_sockfd,*_base);
         break;
 	}
 	delete _base;
@@ -86,14 +86,27 @@ void IMClient::loginAck(PDUBase & _base) {
 	}
 }
 
-void IMClient::bulletin(PDUBase & _base){
+void IMClient::bulletin(int _sockfd,PDUBase & _base){
     Bulletin_Notify  notify;
    if (!notify.ParseFromArray(_base.body.get(), _base.length)) {
     LOGE("roadcast parse fail");
      return;
 
    }
+   printf("bulletin\n");
+   auto it=m_sock_userid.find(_sockfd);
 	++total_recv_pkts;
+    IMChat_Personal_recv_Ack ack;
+    ack.set_msg_id(1);
+    ack.set_user_id(it->second);
+	PDUBase _pack;
+    _pack.terminal_token=_base.terminal_token;
+	_pack.command_id = IMCHAT_PERSONAL_ACK;
+	std::shared_ptr<char> body(new char[ack.ByteSize()]);
+	ack.SerializeToArray(body.get(), ack.ByteSize());
+	_pack.body = body;
+	_pack.length = ack.ByteSize();
+	Send(_sockfd, _pack);
 }
 void IMClient::chatMsg(int _sockfd,PDUBase & _base)
 {
@@ -115,14 +128,14 @@ void IMClient::chatMsg(int _sockfd,PDUBase & _base)
 		//ReplyChatResult(_sockfd, _base, ERRNO_CODE_INVALID_IM_CHAT_EMPTY_BODY_NOT_ALLOWED);
 		//return;
 	}
-   // printf("body:%s,id(%ld)\n",im.body().c_str(),im.msg_id());
+   auto it=m_sock_userid.find(_sockfd);
+    //printf("user_id:%d,body:%s\n",it->second,im.body().c_str());
 	++total_recv_pkts;
-   return;
     IMChat_Personal_recv_Ack ack;
     ack.set_msg_id(im.msg_id());
-    ack.set_user_id(_base.terminal_token);
+    ack.set_user_id(it->second);
 	PDUBase _pack;
-    _pack.terminal_token=_base.terminal_token;
+    _pack.terminal_token=it->second;
 	_pack.command_id = IMCHAT_PERSONAL_ACK;
 	std::shared_ptr<char> body(new char[ack.ByteSize()]);
 	ack.SerializeToArray(body.get(), ack.ByteSize());
@@ -152,6 +165,7 @@ void IMClient::OnLogin(int _sockfd)
 	_pack.length = login.ByteSize();
 	Send(_sockfd, _pack);
 	++m_num;
+    m_sock_userid[_sockfd]=user->id;
 	
 }
 
