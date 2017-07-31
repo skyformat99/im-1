@@ -176,6 +176,7 @@ public:
 			m_tail = node->m_prev;
 		}
 		m_nodemap.erase(loc.m_it);
+        delete node;
 
 	}
 

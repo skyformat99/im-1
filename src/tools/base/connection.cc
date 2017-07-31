@@ -143,11 +143,10 @@ bool bufalloc(msg_t & msg, int len)
 	msg.m_data = NULL;
 	msg.m_len = 0;
 	msg.m_alloc = 0;
-	msg.m_data = (char*)malloc(len);
+	msg.m_data = new char[len];
 	if (msg.m_data)
 	{
 		msg.m_alloc = len;
-		memset(msg.m_data, 0, len);
 		return true;
 	}
 	return false;
@@ -155,10 +154,9 @@ bool bufalloc(msg_t & msg, int len)
 
 void  buffree(msg_t& msg)
 {
-	return;
 	if (msg.m_data != NULL)
 	{
-		free(msg.m_data);
+		delete[] msg.m_data;
 		msg.m_data = NULL;
 	}
 }
