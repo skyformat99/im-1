@@ -8,6 +8,7 @@
 #include <config_file_reader.h>
 #include "YouMai.Bulletin.pb.h"
 #include <json/json.h>
+#include <unistd.h>
 using namespace com::proto::basic;
 using namespace com::proto::chat;
 using namespace com::proto::route;
@@ -134,7 +135,7 @@ int BroadcastServer::HandlerBroadcastMsg(int sendType, std::string& sendTypeCont
 			}
 			if (user_id) {
 				++num;
-				user_list.Add(uit->second->id);
+				user_list.Add(user_id);
 				if (!(num % 2000)) { //send when num=2000*n
 					BroadcastMsg(user_list, msg_id, data, len, 0, cmd);
 					user_list.Clear();

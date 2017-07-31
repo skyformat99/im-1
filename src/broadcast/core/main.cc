@@ -60,7 +60,7 @@ int main() {
 
 	signal(SIGPIPE, SIG_IGN);
 	initLog(CONF_LOG);
-//	daemon();
+	daemon();
 	BroadcastServer server;
 
 	// 读取公共配置信息
