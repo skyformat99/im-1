@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
+#include <deleter.h>
 #define RESEND_NUM_LIMIT 3
 #define BUFF_MAX 1024*100
 #define BUFF_LENGTH 1024*100
@@ -150,7 +150,7 @@ int BlockTcpClient::Read(PDUBase &_base) {
 
 int BlockTcpClient::SendProto(google::protobuf::Message &_msg, int _command_id, int _seq_id) {
     PDUBase base;
-    std::shared_ptr<char> body(new char[_msg.ByteSize()]);
+    std::shared_ptr<char> body(new char[_msg.ByteSize()], carray_deleter);
 
     _msg.SerializeToArray(body.get(), _msg.ByteSize());
     base.body = body;

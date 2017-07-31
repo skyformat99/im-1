@@ -351,7 +351,7 @@ void RouteServer::BroadcastSerivce(Client& client)
         LOGD("(self)broadcast service type(ip:%s,port:%d) to service(ip:%s,port:%d)",obj.ip.c_str(),obj.port,client.ip.c_str(),client.port);
 	}
     PDUBase pack;
-    std::shared_ptr<char> body(new char[broadcast.ByteSize()]);
+    std::shared_ptr<char> body(new char[broadcast.ByteSize()], carray_deleter);
     broadcast.SerializeToArray(body.get(), broadcast.ByteSize());
     pack.body = body;
     pack.command_id = ROUTE_BRAODCAST;
@@ -375,7 +375,7 @@ void RouteServer::BroadcastSerivce(Client& client)
         mit->CopyFrom(info);
         LOGD("(other)broadcast service type(ip:%s,port:%d) to service(ip:%s,port:%d)",client.ip.c_str(),client.port,obj.ip.c_str(),obj.port);
     PDUBase pack;
-    std::shared_ptr<char> body(new char[broadcast.ByteSize()]);
+    std::shared_ptr<char> body(new char[broadcast.ByteSize()], carray_deleter);
     broadcast.SerializeToArray(body.get(), broadcast.ByteSize());
     pack.body = body;
     pack.command_id = ROUTE_BRAODCAST;
@@ -453,7 +453,7 @@ void RouteServer::BroadcastUserState(int user_id, UserState state)
 	us->set_state(state);
 	us->set_node_id(get_user_nid(user_id));
 	PDUBase pack;
-	std::shared_ptr<char> body(new char[user_state.ByteSize()]);
+	std::shared_ptr<char> body(new char[user_state.ByteSize()], carray_deleter);
 	user_state.SerializeToArray(body.get(), user_state.ByteSize());
 	pack.body = body;
 	pack.command_id = CID_USER_STAT_PUSH_REQ;
@@ -516,7 +516,7 @@ void RouteServer::ProcessPhoneCheck(int _sockfd, PDUBase &_pack) {
 
 int RouteServer::SendProto(int _sockfd, google::protobuf::Message &_msg, int _command_id, int _seq_id, int _userid) {
     PDUBase base;
-    std::shared_ptr<char> body(new char[_msg.ByteSize()]);
+    std::shared_ptr<char> body(new char[_msg.ByteSize()], carray_deleter);
 
     if (_msg.SerializeToArray(body.get(), _msg.ByteSize())) {
         base.body = body;

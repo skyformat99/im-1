@@ -9,6 +9,7 @@
 #include "YouMai.Bulletin.pb.h"
 #include <json/json.h>
 #include <unistd.h>
+#include <deleter.h>
 using namespace com::proto::basic;
 using namespace com::proto::chat;
 using namespace com::proto::route;
@@ -199,7 +200,7 @@ int BroadcastServer::IMChatBroadcast(Json::Value& root,std::string& msg_id) {
 	LOGD("broadcast imchat  msg body:%s", root["Body"].asString().c_str());
 	notify.set_allocated_imchat(&im);
 
-	std::shared_ptr<char> body(new char[notify.ByteSize()]);
+	std::shared_ptr<char> body(new char[notify.ByteSize()], carray_deleter);
 	notify.SerializeToArray(body.get(), notify.ByteSize());
 	int sendType = atoi(root["SendType"].asString().c_str());
 	std::string sendTypeContent = root["SendTypeContent"].asString();
@@ -221,7 +222,7 @@ int BroadcastServer::BulltinBroadcast(Json::Value& root, std::string& msg_id) {
 	bul.set_publisher_phone(root["SvcPhone"].asString());
     auto it=notify.add_bulletins();
     it->CopyFrom(bul);
-	std::shared_ptr<char> body(new char[notify.ByteSize()]);
+	std::shared_ptr<char> body(new char[notify.ByteSize()], carray_deleter);
 	notify.SerializeToArray(body.get(), notify.ByteSize());
 	int sendType = atoi(root["SendType"].asString().c_str());
  
@@ -281,7 +282,7 @@ int BroadcastServer::BroadcastMsg(google_list_u32 & user_list,  const std::strin
 	broadcast.set_body(data,len);
 	broadcast.set_expire(expire);
 
-	std::shared_ptr<char> body(new char[broadcast.ByteSize()]);
+	std::shared_ptr<char> body(new char[broadcast.ByteSize()], carray_deleter);
 	broadcast.SerializeToArray(body.get(), broadcast.ByteSize());
 	
 

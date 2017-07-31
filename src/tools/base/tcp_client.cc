@@ -5,7 +5,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <thread>
-
+#include <deleter.h>
 #define BUFF_MAX 1024 * 48
 #define BUFF_LENGTH 1024 * 16
 
@@ -120,7 +120,7 @@ int TcpClient::Send(PDUBase &_base) {
 
 int TcpClient::SendProto(google::protobuf::Message &_msg, int _command_id, int _seq_id) {
     PDUBase pdu_base;
-    std::shared_ptr<char> body(new char[_msg.ByteSize()]);
+    std::shared_ptr<char> body(new char[_msg.ByteSize()], carray_deleter);
 
     _msg.SerializeToArray(body.get(), _msg.ByteSize());
     pdu_base.body = body;

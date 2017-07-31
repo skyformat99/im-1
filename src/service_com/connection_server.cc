@@ -122,7 +122,7 @@ void ConnectionServer::OnDisconn(int _sockfd) {
 	User_LogOff log_off;
 	log_off.set_user_id(userid);
 	PDUBase pack;
-	std::shared_ptr<char> body(new char[log_off.ByteSize()]);
+	std::shared_ptr<char> body(new char[log_off.ByteSize()], carray_deleter);
 	log_off.SerializeToArray(body.get(), log_off.ByteSize());
 	pack.body = body;
 	pack.command_id = USER_LOGOFF;
@@ -247,7 +247,7 @@ void ConnectionServer::ProcessHeartBeat(int _sockfd, PDUBase _pack) {
 	// 回复心跳包
 	Heart_Beat_Ack heart_ack;
 	_pack.command_id = HEART_BEAT_ACK;
-	std::shared_ptr<char> body(new char[heart_ack.ByteSize()]);
+	std::shared_ptr<char> body(new char[heart_ack.ByteSize()], carray_deleter);
 	heart_ack.SerializeToArray(body.get(), heart_ack.ByteSize());
 	_pack.body = body;
 	_pack.length = heart_ack.ByteSize();
@@ -308,7 +308,7 @@ void ConnectionServer::ProcessUserLogout(int _sockfd, PDUBase & _base)
 	User_LogOff log_off;
 	log_off.set_user_id(userid);
 	PDUBase pack;
-	std::shared_ptr<char> body(new char[log_off.ByteSize()]);
+	std::shared_ptr<char> body(new char[log_off.ByteSize()], carray_deleter);
 	log_off.SerializeToArray(body.get(), log_off.ByteSize());
 	pack.body = body;
 	pack.command_id = USER_LOGOFF;
@@ -412,7 +412,7 @@ void ConnectionServer::ProcessIMChat_Personal(int _sockfd, PDUBase&  _base) {
 			++offline_msg;
 			IMChat_Personal_Notify im_notify;
 			im_notify.set_allocated_imchat(&im);
-			std::shared_ptr<char> body(new char[im_notify.ByteSize()]);
+			std::shared_ptr<char> body(new char[im_notify.ByteSize()], carray_deleter);
 			im_notify.SerializeToArray(body.get(), im_notify.ByteSize());
 			_base.body = body;
 			_base.length = im_notify.ByteSize();
@@ -558,7 +558,7 @@ void ConnectionServer::ProcessBulletin_broadcast(int _sockfd, PDUBase & _base)
 
 	std::string msg_id = broadcast.msg_id();
 	auto& body = broadcast.body();
-	std::shared_ptr<char> pbody(new char[body.length()]);
+	std::shared_ptr<char> pbody(new char[body.length()], carray_deleter);
 	memcpy(pbody.get(), body.c_str(), body.length());
 	_base.body= pbody;
     _base.length=body.length();
@@ -639,7 +639,7 @@ void ConnectionServer::ProcessRouteMsg(PDUBase * _base)
 
 void ConnectionServer::ProcessUserStatSyncRsp(RouteSyncUserStateRsp& rsp) {
 	PDUBase pack;
-	std::shared_ptr<char> body(new char[rsp.ByteSize()]);
+	std::shared_ptr<char> body(new char[rsp.ByteSize()], carray_deleter);
 	rsp.SerializeToArray(body.get(), rsp.ByteSize());
 	pack.body = body;
 	pack.command_id = CID_USER_STAT_SYNC_RSP;
@@ -708,7 +708,7 @@ void ConnectionServer::RegistUsersToRoute() {
 }
 
 void ConnectionServer::ResetPackBody(PDUBase &_pack, google::protobuf::Message &_msg, int _commandid) {
-    std::shared_ptr<char> body(new char[_msg.ByteSize()]);
+    std::shared_ptr<char> body(new char[_msg.ByteSize()], carray_deleter);
     _msg.SerializeToArray(body.get(), _msg.ByteSize());
     _pack.body = body;
     _pack.length = _msg.ByteSize();
@@ -728,7 +728,7 @@ void ConnectionServer::ProcessIMChat_fromRoute(PDUBase &_base) {
         if (target.online_status_ == OnlineStatus_Connect) {
 			IMChat_Personal_Notify im_notify;
 			im_notify.set_allocated_imchat(&im);
-			std::shared_ptr<char> body(new char[im_notify.ByteSize()]);
+			std::shared_ptr<char> body(new char[im_notify.ByteSize()], carray_deleter);
 			im_notify.SerializeToArray(body.get(), im_notify.ByteSize());
 			_base.body = body;
 			_base.length = im_notify.ByteSize();
@@ -843,7 +843,7 @@ void ConnectionServer::ConsumeHistoryMessage(UserId_t _userid) {
 		LOGE("not find user_id(%d)", _userid);
 		return;
 	}
-    std::shared_ptr<char> base64_data(new char[4096]);
+    std::shared_ptr<char> base64_data(new char[4096], carray_deleter);
     PDUBase base;
 	std::list<std::string> encode_imlist;
 	if (redis_client.GetOfflineIMList(_userid, encode_imlist)) {
@@ -856,19 +856,19 @@ void ConnectionServer::ConsumeHistoryMessage(UserId_t _userid) {
 		int base64_size = base64_decode(base64_data.get(), item->c_str(), item->length());
 		if (base64_size > 0 && OnPduParse(base64_data.get(), base64_size, base) > 0) {
 		//	ProcessIMChat_fromRoute(base);
-			IMChat_Personal_Notify im_notify;
+			/*IMChat_Personal_Notify im_notify;
 			if (!im_notify.ParseFromArray(base.body.get(), base.length)) {
 				LOGERROR(base.command_id, base.seq_id, "ConsumeHistoryMessage包解析错误");
 				return;
 			}
-			const IMChat_Personal& im = im_notify.imchat();
+			const IMChat_Personal& im = im_notify.imchat();*/
 			if (client.version != NEW_VERSION) {
 				if (!Send(client.sockfd_, base)) {
 					OnSendFailed(base);
 				}
 			}
 			else {
-				need_send_msg(_userid, client.sockfd_, base, im.msg_id());
+				need_send_msg(_userid, client.sockfd_, base, 0);
 			}
 		}
 	}
@@ -931,7 +931,7 @@ void ConnectionServer::ConsumeHistoryMessage(UserId_t _userid) {
             it->CopyFrom(bul);
 		}
 		PDUBase _pack;
-		std::shared_ptr<char> body(new char[notify->ByteSize()]);
+		std::shared_ptr<char> body(new char[notify->ByteSize()], carray_deleter);
 		notify->SerializeToArray(body.get(), notify->ByteSize());
         _pack.terminal_token=_userid;
 		_pack.body = body;
@@ -1112,7 +1112,7 @@ void ConnectionServer::ReplyChatResult(int _sockfd, PDUBase &_pack, ERRNO_CODE _
     im_ack.set_errer_no(_code);
     im_ack.set_msg_id(msg_id);
     im_ack.set_is_target_online(is_target_online);
-    std::shared_ptr<char> new_body(new char[im_ack.ByteSize()]);
+    std::shared_ptr<char> new_body(new char[im_ack.ByteSize()], carray_deleter);
     im_ack.SerializeToArray(new_body.get(), im_ack.ByteSize());
     _pack.body = new_body;
     _pack.length = im_ack.ByteSize();

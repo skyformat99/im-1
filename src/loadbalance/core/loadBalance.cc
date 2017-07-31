@@ -172,7 +172,7 @@ void LoadBalanceServer::ProcessReportOnliners(int _sockfd, PDUBase & _pack)
 
 int LoadBalanceServer::SendProto(int _sockfd, google::protobuf::Message &_msg, int _command_id, int _seq_id, int _userid) {
 	PDUBase base;
-	std::shared_ptr<char> body(new char[_msg.ByteSize()]);
+	std::shared_ptr<char> body(new char[_msg.ByteSize()],carray_deleter);
 
 	if (_msg.SerializeToArray(body.get(), _msg.ByteSize())) {
 		base.body = body;

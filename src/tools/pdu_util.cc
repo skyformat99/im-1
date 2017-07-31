@@ -2,7 +2,7 @@
 #include "log_util.h"
 #include <arpa/inet.h>
 #include <string.h>
-
+#include <deleter.h>
 PduUtil::PduUtil() {
 
 }
@@ -57,7 +57,7 @@ int PduUtil::OnPduParse(const char *_buf, int _length, PDUBase &_base/*this is r
         //LOGE("not a full pack, %d + %d > %d", buf - _buf, _base.length, _length);
         return 0;
     }
-    std::shared_ptr<char> pbody(new char[_base.length]);
+    std::shared_ptr<char> pbody(new char[_base.length], carray_deleter);
     memcpy(pbody.get(), buf, _base.length);
     _base.body = pbody;
     return buf - _buf + _base.length;
@@ -109,7 +109,7 @@ int PduUtil::_OnPduParse(const char *_buf, int _length, PDUBase &_base/*this is 
         //LOGE("not a full pack, %d + %d > %d", buf - _buf, _base.length, _length);
         return 0;
     }*/
-    std::shared_ptr<char> pbody(new char[_base.length]);
+    std::shared_ptr<char> pbody(new char[_base.length], carray_deleter);
     memcpy(pbody.get(), buf, _length-(buf-_buf));
     _base.body = pbody;
 	return 0;
@@ -142,7 +142,7 @@ int PduUtil::OnPduPack(PDUBase &_base, std::shared_ptr<char> &_outbuf/*this is r
     total_len += sizeof(int);
 
     total_len += _base.length;
-    std::shared_ptr<char> sp_buf(new char[total_len]);
+    std::shared_ptr<char> sp_buf(new char[total_len], carray_deleter);
     char *buf = sp_buf.get();
 
     int offset = 0;

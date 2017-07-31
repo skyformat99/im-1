@@ -188,7 +188,7 @@ void Transfer::ProcessBroadcast(int _sockfd, PDUBase & _base)
 		auto user_list= broadcast.mutable_user_id_list();
 		*user_list=it->second;
 
-		std::shared_ptr<char> body(new char[broadcast.ByteSize()]);
+		std::shared_ptr<char> body(new char[broadcast.ByteSize()], carray_deleter);
 		broadcast.SerializeToArray(body.get(), broadcast.ByteSize());
 		_base.body = body;
 		_base.length = broadcast.ByteSize();
@@ -362,7 +362,7 @@ void Transfer::HandlerOfflineMsg(User * user)
 				auto user_list = broadcast.mutable_user_id_list();
 				user_list->Add(user->m_id);
 
-				std::shared_ptr<char> body(new char[broadcast.ByteSize()]);
+				std::shared_ptr<char> body(new char[broadcast.ByteSize()], carray_deleter);
 				broadcast.SerializeToArray(body.get(), broadcast.ByteSize());
 				_base->body = body;
 				_base->length = broadcast.ByteSize();

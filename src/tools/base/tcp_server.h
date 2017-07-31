@@ -8,7 +8,7 @@
 #include <mutex>
 #include <map>
 #include <sdEventloop.h>
-
+#include <deleter.h>
 #define TCP_MAX_BUFF 51200
 #define MAX_EVENTS 100
 #define TIMEOUT_INTERVAL 100
