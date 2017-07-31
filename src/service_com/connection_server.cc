@@ -429,6 +429,7 @@ void ConnectionServer::ProcessIMChat_Personal(int _sockfd, PDUBase&  _base) {
 		//return;
 	}
 
+    return;
 	//LOGDEBUG(_base.command_id, _base.seq_id, "消息入Redis库");
 	SaveIMObject object;
 	object.id_ = msg_id;
@@ -480,8 +481,7 @@ void ConnectionServer::ProcessChatMsg_ack(int _sockfd, PDUBase & _base) {
 		if (!it->second.empty()) {
 			Ackmsg* ackmsg=it->second.front();
 			if (ackmsg->msg_id != msg_id) {
-				LOGD("user_id(%d) rsp error ack msg_id(%d)", user_id, msg_id);
-				return;
+				LOGD("user_id(%d) rsp error ack msg_id(%d)", user_id, msg_id);//because of user having recving the pkt even if msg_id not true. we continue send it next msg due to the using online
 			}
 			delete ackmsg;
 			it->second.pop_front();
@@ -933,6 +933,7 @@ void ConnectionServer::ConsumeHistoryMessage(UserId_t _userid) {
 		PDUBase _pack;
 		std::shared_ptr<char> body(new char[notify->ByteSize()]);
 		notify->SerializeToArray(body.get(), notify->ByteSize());
+        _pack.terminal_token=_userid;
 		_pack.body = body;
 		_pack.length = notify->ByteSize();
 
@@ -1061,6 +1062,9 @@ void ConnectionServer::delete_ack_msg(int _userid, uint64_t msg_id)
 	if (it != m_ack_msg_map_.end()) {
 		m_ack_msg_map_.erase(it);
 	}
+    else{
+        LOGE("not find user_id(%d)",_userid);
+    }
 }
 
 void ConnectionServer::check_send_msg()
