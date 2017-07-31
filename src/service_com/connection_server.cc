@@ -429,7 +429,6 @@ void ConnectionServer::ProcessIMChat_Personal(int _sockfd, PDUBase&  _base) {
 		//return;
 	}
 
-    return;
 	//LOGDEBUG(_base.command_id, _base.seq_id, "消息入Redis库");
 	SaveIMObject object;
 	object.id_ = msg_id;
