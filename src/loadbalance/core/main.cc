@@ -62,7 +62,6 @@ int main() {
 	signal(SIGPIPE, SIG_IGN);
 	initLog(CONF_LOG);
 	daemon();
-		// 读取公共配置信息
 	ConfigFileReader reader(CONF_PUBLIC_URL);
 	Http httpserver;
 	if (httpserver.init(reader.ReadString(CONF_LOADBALANCE_HTTP_IP), reader.ReadInt(CONF_LOADBALANCE_HTTP_PORT),1) == -1) {

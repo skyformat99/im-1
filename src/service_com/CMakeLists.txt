@@ -58,4 +58,4 @@ LINK_DIRECTORIES("../../libs/")
 
 
 ADD_EXECUTABLE(service_com ${DIR_SRCS} ${root} ${tools} ${base} ${protobuf} ${json} ${redis}  ${objects})
-TARGET_LINK_LIBRARIES(service_com protobuf -lpthread log4cpp event_pthreads event)
+TARGET_LINK_LIBRARIES(service_com protobuf -lpthread log4cpp event_pthreads event jemalloc)

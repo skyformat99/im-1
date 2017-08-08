@@ -91,12 +91,11 @@ int RouteServer::init()
 
 int RouteServer::start()
 {
+    LOGD("server listen addr[%s]:%d",ip_.c_str(),port_);
 	StartServer(ip_, port_);
 }
 
 void RouteServer::SyncUserData(std::list<std::string>& _keys) {
-    LOGD("同步redis数据%d", _keys.size());
-    if (_keys.size() == 0) return;
 
     for (auto it = _keys.begin(); it != _keys.end(); it++) {
         std::string phone = LogicUtil::get_phone(*it);

@@ -52,4 +52,4 @@ LINK_DIRECTORIES("../../libs/")
 
 
 ADD_EXECUTABLE(transfer  ${DIR_SRCS} ${root} ${tools} ${base} ${protobuf}  ${redis}  )
-TARGET_LINK_LIBRARIES(transfer  protobuf -lpthread log4cpp event_pthreads event)
+TARGET_LINK_LIBRARIES(transfer  protobuf -lpthread log4cpp event_pthreads event jemalloc)

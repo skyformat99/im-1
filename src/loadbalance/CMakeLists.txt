@@ -52,4 +52,4 @@ LINK_DIRECTORIES("../../libs/")
 
 
 ADD_EXECUTABLE(loadbalance  ${DIR_SRCS} ${root} ${tools} ${base} ${protobuf}  ${redis}  )
-TARGET_LINK_LIBRARIES(loadbalance  protobuf -lpthread log4cpp event_pthreads event)
+TARGET_LINK_LIBRARIES(loadbalance  protobuf -lpthread log4cpp event_pthreads event jemalloc)

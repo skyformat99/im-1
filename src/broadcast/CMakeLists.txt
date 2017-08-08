@@ -55,4 +55,4 @@ LINK_DIRECTORIES("../../libs/")
 
 
 ADD_EXECUTABLE(broadcast  ${DIR_SRCS} ${root} ${tools} ${base} ${protobuf}  ${redis} ${json}  )
-TARGET_LINK_LIBRARIES(broadcast  protobuf -lpthread log4cpp event_pthreads event)
+TARGET_LINK_LIBRARIES(broadcast  protobuf -lpthread log4cpp event_pthreads event jemalloc)
