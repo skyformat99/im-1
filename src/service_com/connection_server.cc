@@ -1,5 +1,4 @@
 #include "connection_server.h"
-#include "main.h"
 #include "log_util.h"
 #include "config_file_reader.h"
 #include "YouMai.Chat.pb.h"
@@ -54,7 +53,7 @@ int ConnectionServer::init()
 	route_port_ = reader.ReadInt(CONF_ROUTE_PORT);
 	
 	redis_client.Init_Pool(reader.ReadString(CONF_REDIS_IP), reader.ReadInt(CONF_REDIS_PORT),
-		reader.ReadString(CONF_REDIS_AUTH), CONNECTPOOL_AND_THREADPOOL_NUMBER);
+		reader.ReadString(CONF_REDIS_AUTH) );
 	redis_client.SetKeysExpire(reader.ReadInt(CONF_REDIS_EXPIRE));
 
 	if (route_client_.Connect(route_ip_.c_str(), route_port_)) {
@@ -123,10 +122,9 @@ void ConnectionServer::OnRecv(int _sockfd, PDUBase* _base) {
 	case IMCHAT_PERSONAL_NOTIFY:
 	case BULLETIN_NOTIFY:
 	case IMCHAT_PERSONAL_ACK:
-		
 		m_chat_msg_process.addJob(_sockfd, _base);
 		break;
-	case default:
+    default:
 		LOGE("unknow cmd(%d)", cmd);
 		delete _base;
 		break;
@@ -263,7 +261,6 @@ void ConnectionServer::ProcessClientMsg(int _sockfd, PDUBase* _base)
 		pInstance->ProcessUserLogout(_sockfd, *_base);
 		break;
 	case IMCHAT_PERSONAL:
-		++m_total_recv_pkt;
 		pInstance->ProcessIMChat_Personal(_sockfd, *_base);
 		break;
 	case IM_OFFLINE_MSG:

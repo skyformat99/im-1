@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <atomic>
+#include <connection_server.h>
 int total_recv_pkt;
 int sec_recv_pkt;
 int total_user_login;
@@ -154,7 +155,7 @@ void count(){
 	while(1){
 	    sleep(1);
         int offline=offline_msg;
-	    printf("success connection:%d,login user:%d ,offline msg:%d ,total recv %d pkts,every recv %d pkt,send success:%d ,route_msg:%d\n",connect_server.getConnectNum(),connect_server.getOnliners(),offline,total_recv_pkt,total_recv_pkt-sec_recv_pkt,send_success_pkts,route_msg);
+	  //  printf("success connection:%d,login user:%d ,offline msg:%d ,total recv %d pkts,every recv %d pkt,send success:%d ,route_msg:%d\n",connect_server.getConnectNum(),connect_server.getOnliners(),offline,total_recv_pkt,total_recv_pkt-sec_recv_pkt,send_success_pkts,route_msg);
 	    sec_recv_pkt=total_recv_pkt;
 	}
 }

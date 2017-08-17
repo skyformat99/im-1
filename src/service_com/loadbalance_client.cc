@@ -1,6 +1,5 @@
 #include "loadbalance_client.h"
 
-#include "main.h"
 #include "YouMai.Loadbalance.pb.h"
 #include "YouMai.Route.pb.h"
 #include "log_util.h"

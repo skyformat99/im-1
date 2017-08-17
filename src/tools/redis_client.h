@@ -15,7 +15,7 @@ public:
     RedisClient();
     ~RedisClient();
 
-    void Init_Pool(std::string _ip, int _port, std::string _auth, int _num);
+    void Init_Pool(std::string _ip, int _port, std::string _auth, int _num=1);
 	redisContext * ConnectRedis(std::string & ip, int port,std::string& auth);
 	redisContext * getConnect();
 //	redisContext* Connect(std::string& ip, int port);

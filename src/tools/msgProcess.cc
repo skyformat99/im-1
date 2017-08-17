@@ -6,15 +6,6 @@
 #include <thread>
 #include<cstdlib>
 #include <log_util.h>
-std::atomic_long total_count;
-long sec_count;
-void count(){
-	while(1){
-		sleep(1);
-		printf("sec count:%ld\n",(long)total_count-sec_count);
-		sec_count=(long)total_count;
-	}
-}
 MsgProcess::~MsgProcess()
 {
 	destroy_cond(m_cond);
@@ -73,7 +64,7 @@ void MsgProcess::run()
 		}
 		arg_t  arg;
 		arg = m_rbuf.front();
-		m_rbuf.pop();
+		m_rbuf.pop_front();
 		unlock_mutex(m_mutex);
 		if (m_handler) {
 			m_handler(arg.socket, arg.pdu);
@@ -82,7 +73,6 @@ void MsgProcess::run()
 			LOGE("not set msg handler");
 			return;
 		}
-		++total_count;
 		
 	}
 	stop_thread();

@@ -14,9 +14,11 @@
 #include <pthread.h>
 #include <atomic>
 #include <ackMsgMap.h>
-#include <Lock.h>
+#include <lock.h>
+#include <ThreadPool.h>
 #include <msgProcess.h>
 #include <time_util.h>
+#include <redis_client.h>
 #define NEW_VERSION                   1
 #define MSG_ACK_TIME                  5
 
@@ -30,6 +32,7 @@ typedef std::unordered_map<UserId_t, ClientObject> User_Connect_Map_t;
 typedef std::unordered_map<UserId_t, std::list<PDUBase> > Send_Queue_t;
 typedef std::unordered_map<std::string, UserId_t > Phone_userid_t;
 
+class  SaveIMObject;
 class Ackmsg {
 public:
 	Ackmsg(uint64_t msg_id_, PDUBase& pdu_) :msg_id(msg_id_), pdu(pdu_) {

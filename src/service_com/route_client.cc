@@ -6,7 +6,6 @@
 using namespace com::proto::basic;
 using namespace com::proto::route;
 
-extern ConnectionServer connect_server;
 RouteClient::RouteClient() {
 
 }
@@ -33,7 +32,7 @@ int RouteClient::RouteTarget(PDUBase &_base, UserId_t _userid, const std::string
 }
 
 void RouteClient::OnRecv(PDUBase* _base) {
-	connect_server.OnRoute(_base);
+    ConnectionServer::getInstance()->OnRoute(_base);
 }
 
 void RouteClient::OnConnect() {

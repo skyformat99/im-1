@@ -2,7 +2,7 @@
 #define _GROUP_QUEUE_H_
 #include <Concurrentqueue.h>
 #include <queue>
-#include <Lock.h>
+#include <lock.h>
 
 #define LOCK_DEQUE 1
 template <typename T>
