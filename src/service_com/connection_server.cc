@@ -33,11 +33,19 @@ ConnectionServer::ConnectionServer() {
 	m_lastTime = 0;
 }
 
+ConnectionServer * ConnectionServer::getInstance()
+{
+	static ConnectionServer instance;
+	return &instance;
+}
+
 int ConnectionServer::init()
 {
 	// 读取route配置信息，进行连接
 	ConfigFileReader reader(CONF_PUBLIC_URL);
-	loadbalance_client_.SetRegistInfo(reader.ReadString(CONF_COM_IP), reader.ReadInt(CONF_COM_PORT));
+	ip_ = reader.ReadString(CONF_COM_IP);
+	port_ = reader.ReadInt(CONF_COM_PORT);
+	loadbalance_client_.SetRegistInfo(ip_,port_ );
 	route_client_.SetRegistInfo(reader.ReadString(CONF_COM_IP), reader.ReadInt(CONF_COM_PORT));
 
 	loadbalance_ip_ = reader.ReadString(CONF_LOADBALANCE_IP);
@@ -45,14 +53,25 @@ int ConnectionServer::init()
 	route_ip_ = reader.ReadString(CONF_ROUTE_IP);
 	route_port_ = reader.ReadInt(CONF_ROUTE_PORT);
 	
+	redis_client.Init_Pool(reader.ReadString(CONF_REDIS_IP), reader.ReadInt(CONF_REDIS_PORT),
+		reader.ReadString(CONF_REDIS_AUTH), CONNECTPOOL_AND_THREADPOOL_NUMBER);
+	redis_client.SetKeysExpire(reader.ReadInt(CONF_REDIS_EXPIRE));
+
 	if (route_client_.Connect(route_ip_.c_str(), route_port_)) {
 		LOGE("connect route server fail");
-		exit(0);
+		return -1;
 	}
 	if (loadbalance_client_.Connect(loadbalance_ip_.c_str(), loadbalance_port_)) {
 		LOGE("connect loadbalance server fail");
-		exit(0);
+		return -1;
 	}
+
+	
+	
+	m_chat_msg_process.init(ProcessClientMsg);
+	
+
+	m_common_msg_process.init(ProcessClientMsg, 2);
 	
 	CreateTimer(1000, Timer, this);
 	ack_time_ = MSG_ACK_TIME;
@@ -62,12 +81,18 @@ int ConnectionServer::init()
 	// tcp阻塞连接，用于查询
 	//  block_tcp_client_.Connect(query_ip_.c_str(), query_port_, false);
 	m_offline_works = new ThreadPool(1); //save offline msg threads
+	m_route_works = new ThreadPool(2); //handler route msg;
+	m_storage_msg_works = new ThreadPool(1);//save msg redis;
 }
 
-void ConnectionServer::StartServer(std::string _ip, short _port) {
-    ip_ = _ip;
-    port_ = _port;
-    TcpServer::StartServer(_ip, _port);
+void ConnectionServer::start() {
+	
+    m_chat_msg_process.start();
+	
+	m_common_msg_process.start();
+	sleep(1);
+	LOGD("connect server listen on %s:%d", ip_.c_str(), port_);
+    TcpServer::StartServer(ip_, port_);
 }
 
 extern int total_recv_pkt;
@@ -75,6 +100,7 @@ extern int total_user_login;
 
 void ConnectionServer::OnRecv(int _sockfd, PDUBase* _base) {
 	int cmd = _base->command_id;
+	int index = 0;
 	if (_base->terminal_token<0) {
 		LOGD("==========sockfd:%d===userid:%d==========>in cmd:%d", _sockfd, _base->terminal_token, _base->command_id);
 		delete _base;
@@ -85,12 +111,25 @@ void ConnectionServer::OnRecv(int _sockfd, PDUBase* _base) {
 		delete _base;
 		return;
 	}
-	if (USER_LOGOFF == cmd) {
-		ProcessUserLogout(_sockfd,*_base);
+
+	switch (cmd) {
+	case HEART_BEAT:
+	case USER_LOGIN:
+	case USER_LOGOFF:
+		m_common_msg_process.addJob(_sockfd, _base);
+		break;
+
+	case IMCHAT_PERSONAL:
+	case IMCHAT_PERSONAL_NOTIFY:
+	case BULLETIN_NOTIFY:
+	case IMCHAT_PERSONAL_ACK:
+		
+		m_chat_msg_process.addJob(_sockfd, _base);
+		break;
+	case default:
+		LOGE("unknow cmd(%d)", cmd);
 		delete _base;
-	}
-	else {
-		thread_pool.enqueue(&ConnectionServer::ProcessClientMsg, this, _sockfd, _base);
+		break;
 	}
 
 	//printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~<<<<<出\n");
@@ -161,6 +200,7 @@ int ConnectionServer::PreProcessPack(int _sockfd, int _userid, PDUBase &_base) {
         int status=client.online_status_;
 		client.sockfd_ = _sockfd;
         client.online_status_=OnlineStatus_Connect;
+		client.online_time = time(0);
 		{
 			std::lock_guard<std::recursive_mutex> lock_1(user_map_mutex_);
 			user_map_[client.userid_] = client;
@@ -197,34 +237,49 @@ int ConnectionServer::PreProcessPack(int _sockfd, int _userid, PDUBase &_base) {
 	}
 
 	// thread_pool.enqueue(&ConnectionServer::ResendFailedPack, this, _sockfd, _userid);
-	thread_pool.enqueue(&ConnectionServer::ConsumeHistoryMessage, this, _userid);
+	//thread_pool.enqueue(&ConnectionServer::ConsumeHistoryMessage, this, _userid);
+	PDUBase* pdu = new PDUBase;
+	pdu->command_id = IM_OFFLINE_MSG;
+	pdu->terminal_token = _userid;
+	m_chat_msg_process.addJob(_sockfd, pdu);
 	ResendFailedPack(_sockfd, _userid);
 	return 0;
 }
 
 void ConnectionServer::ProcessClientMsg(int _sockfd, PDUBase* _base)
 {
+	ConnectionServer* pInstance = ConnectionServer::getInstance();
 	switch (_base->command_id) {
 	case HEART_BEAT:
-		ProcessHeartBeat(_sockfd, *_base);
+		pInstance->ProcessHeartBeat(_sockfd, *_base);
 		break;
 	case USER_LOGIN:
 		++total_user_login;
-		ProcessUserLogin(_sockfd, *_base);
+		pInstance->ProcessUserLogin(_sockfd, *_base);
 		//          _ProcessUserLogin(_sockfd,&_base);
+		break;
+
+	case USER_LOGOFF :
+		pInstance->ProcessUserLogout(_sockfd, *_base);
 		break;
 	case IMCHAT_PERSONAL:
 		++m_total_recv_pkt;
-		ProcessIMChat_Personal(_sockfd, *_base);
+		pInstance->ProcessIMChat_Personal(_sockfd, *_base);
+		break;
+	case IM_OFFLINE_MSG:
+		pInstance->ConsumeHistoryMessage(_base->terminal_token);
 		break;
 	case IMCHAT_PERSONAL_ACK:
-		ProcessChatMsg_ack(_sockfd, *_base);
+		pInstance->ProcessChatMsg_ack(_sockfd, *_base);
         break;
 	case IMCHAT_PERSONAL_NOTIFY:
-		ProcessIMChat_broadcast(_sockfd, *_base);
+		pInstance->ProcessIMChat_broadcast(_sockfd, *_base);
 		break;
 	case BULLETIN_NOTIFY:
-		ProcessBulletin_broadcast(_sockfd, *_base);
+		pInstance->ProcessBulletin_broadcast(_sockfd, *_base);
+		break;
+	case 0:
+		pInstance->ack_timeout_handler(_base->terminal_token);
 		break;
 	default:
 		LOGE("unknow cmd:%d", _base->command_id);
@@ -428,34 +483,35 @@ void ConnectionServer::ProcessIMChat_Personal(int _sockfd, PDUBase&  _base) {
 		ReplyChatResult(_sockfd, _base, (ERRNO_CODE)errno_code,false,msg_id);
 		//return;
 	}
-
-    return;
 	//LOGDEBUG(_base.command_id, _base.seq_id, "消息入Redis库");
-	SaveIMObject object;
-	object.id_ = msg_id;
-	object.pid_ = 0;
-	object.brand_ = 0;
-	object.content_type_ = im.content_type();
-	object.delete_flag_ = 0;
-	object.reply_flag_ = 0;
-	object.collect_flag_ = 0;
-	object.sender_userid_ = im.src_usr_id();
-	object.sender_phone_ = im.src_phone();
-	object.recver_userid_ = im.target_user_id();
-	object.recver_phone_ = im.target_phone();
-	object.body_ = im.body();
-	object.add_time_ = TimeUtil::timestamp_datetime();
-	redis_client.InsertIMtoRedis(object.ToJson());
+	SaveIMObject*  object = new SaveIMObject;
+	object->id_ = msg_id;
+	object->pid_ = 0;
+	object->brand_ = 0;
+	object->content_type_ = im.content_type();
+	object->delete_flag_ = 0;
+	object->reply_flag_ = 0;
+	object->collect_flag_ = 0;
+	object->sender_userid_ = im.src_usr_id();
+	object->sender_phone_ = im.src_phone();
+	object->recver_userid_ = im.target_user_id();
+	object->recver_phone_ = im.target_phone();
+	object->body_ = im.body();
+	object->add_time_ = TimeUtil::timestamp_datetime();
+	m_storage_msg_works->enqueue(&ConnectionServer::storage_common_msg, this, object);
+	
 
 	//LOGDEBUG(_base.command_id, _base.seq_id, "推送%d", device_type);
 	if (device_type == DeviceType_IPhone || device_type == DeviceType_IPad) {
-		Json::FastWriter fwriter;
+		Json::FastWriter  fwriter;
 		Json::Value root;
 		root["message"] = Json::Value(im.body());
 		root["targetPhone"] = Json::Value(im.target_phone());
 		root["msisdn"] = Json::Value(im.src_phone());
 		root["imType"] = im.content_type();
-		redis_client.InsertIMPushtoRedis(fwriter.write(root));
+		std::string* object = new std::string;
+		*object = fwriter.write(root);
+		m_storage_msg_works->enqueue(&ConnectionServer::storage_apple_msg, this, object);
 	}
 }
 
@@ -467,15 +523,16 @@ void ConnectionServer::ProcessChatMsg_ack(int _sockfd, PDUBase & _base) {
 		return;
 	}
 	int user_id = ack.user_id();
-	ClientObject target;
+	ClientObject* target;
 	if (!find_client_by_userid(user_id, target)) {
 		return;
 	}
+	target->ack_time = time(0);
 	uint64_t msg_id = ack.msg_id();
 	LOGD("recv user_id(%d) ack msg(%ld)", user_id, msg_id);
 	
-	//std::lock_guard<std::recursive_mutex> lock1(m_send_msg_mutex_);
-	CAutoRWLock lock(&m_rwlock_, 'r');
+//	std::lock_guard<std::recursive_mutex> lock1(m_send_msg_mutex_);
+//	CAutoRWLock lock(&m_rwlock_, 'w');
 	auto it = m_send_msg_map_.find(user_id);
 	if (it != m_send_msg_map_.end()) {//last msg is waiting for ack
 		if (!it->second.empty()) {
@@ -483,13 +540,16 @@ void ConnectionServer::ProcessChatMsg_ack(int _sockfd, PDUBase & _base) {
 			if (ackmsg->msg_id != msg_id) {
 				LOGD("user_id(%d) rsp error ack msg_id(%d)", user_id, msg_id);//because of user having recving the pkt even if msg_id not true. we continue send it next msg due to the using online
 			}
+			LOGD("msg_id(%ld)  ack latency time %d ms", msg_id,get_mstime() - ackmsg->ms);
 			delete ackmsg;
 			it->second.pop_front();
             delete_ack_msg(user_id,msg_id);
+			target->send_pending = 0;
 			if (!it->second.empty()) {
 				ackmsg = it->second.front();
                 LOGD("begin send msg_id(%ld)",ackmsg->msg_id);
-				Send(target.sockfd_, ackmsg->pdu);//ignore send result,if fail 
+				Send(target->sockfd_, ackmsg->pdu);//ignore send result,if fail 
+				target->send_pending = 1;
 				record_waiting_ackmsg(user_id, ackmsg->msg_id);
 			}
 		}
@@ -543,8 +603,9 @@ void ConnectionServer::ProcessIMChat_broadcast(int _sockfd, PDUBase & _base)
                 continue;
 			}
 		}
+		LOGD("save broadcast offline msg user_id(%d)", *it);
 		std::string userid = "userid:" + std::to_string(*it);
-		redis_client.InsertBroadcastOfflineIMtoRedis(userid, channel_msg);
+		m_storage_msg_works->enqueue(&ConnectionServer::storage_broadoffline_msg, this, userid,channel_msg);
 	}
 }
 
@@ -588,8 +649,9 @@ void ConnectionServer::ProcessBulletin_broadcast(int _sockfd, PDUBase & _base)
 				continue;
 			}
 		}
+		LOGD("save bulletin offline msg user_id(%d)", *it);
 		std::string userid = "userid:" + std::to_string(*it);
-		redis_client.InsertBroadcastOfflineIMtoRedis(userid, channel_msg);
+		m_storage_msg_works->enqueue(&ConnectionServer::storage_broadoffline_msg, this, userid, channel_msg);
 	}
 }
 	
@@ -605,8 +667,24 @@ void ConnectionServer::SaveOfflineMsg_(int _userid, char* data,int len)
 
 void ConnectionServer::SaveOfflineMsg(int _userid, PDUBase & _base)
 {
-	char buffer[10240] = { 0 };
-	char* data=NULL;
+	char* data = NULL;
+	//first check send queue
+	auto mit = m_send_msg_map_.find(_userid);
+	if (mit != m_send_msg_map_.end()) {
+		std::list<Ackmsg*>& msg_list = mit->second;
+		LOGD("user_id(%d) offline msg num:%d", _userid, msg_list.size());
+		for (auto msg_it = msg_list.begin(); msg_it != msg_list.end(); msg_it++) {
+			int len = OnPduPack((*msg_it)->pdu, data);
+			if (len > 0) {
+				m_offline_works->enqueue(&ConnectionServer::SaveOfflineMsg_, this, _userid, data, len);
+			}
+		//	SaveOfflineMsg(*it, (*msg_it)->pdu);//save timeout user msg
+			delete *msg_it;
+
+		}
+		m_send_msg_map_.erase(_userid);
+	}
+	
 	int len = OnPduPack(_base, data);
 	if (len > 0) {
 		m_offline_works->enqueue(&ConnectionServer::SaveOfflineMsg_, this, _userid, data, len);
@@ -614,7 +692,7 @@ void ConnectionServer::SaveOfflineMsg(int _userid, PDUBase & _base)
 }
 
 void ConnectionServer::OnRoute(PDUBase* _base) {
-	thread_pool.enqueue(&ConnectionServer::ProcessRouteMsg, this, _base);
+	m_route_works->enqueue(&ConnectionServer::ProcessRouteMsg, this, _base);
 }
 
 void ConnectionServer::ProcessRouteMsg(PDUBase * _base)
@@ -800,6 +878,7 @@ int ConnectionServer::BuildUserCacheInfo(int _sockfd, User_Login& _login,int ver
 	client.device_id_ = _login.has_device_id() ? _login.device_id() : "";
 	client.device_type_ = _login.has_device_type() ? _login.device_type() : DeviceType_UNKNOWN;
 	client.password_ = _login.has_pwd() ? _login.pwd() : "";
+	client.online_time = time(0);
     
     {
         std::lock_guard<std::recursive_mutex> lock_1(socket_userid_mutex_);
@@ -849,6 +928,7 @@ void ConnectionServer::ConsumeHistoryMessage(UserId_t _userid) {
 	if (redis_client.GetOfflineIMList(_userid, encode_imlist)) {
 	
 	LOGD("user_id(%d) have %d offline chatmsg",_userid, encode_imlist.size());
+	
 	for (auto item = encode_imlist.begin(); item != encode_imlist.end(); item++) {
 		if (item->length() > 3000) continue;
 
@@ -862,13 +942,26 @@ void ConnectionServer::ConsumeHistoryMessage(UserId_t _userid) {
 				return;
 			}
 			const IMChat_Personal& im = im_notify.imchat();*/
+			
 			if (client.version != NEW_VERSION) {
 				if (!Send(client.sockfd_, base)) {
 					OnSendFailed(base);
 				}
 			}
 			else {
-				need_send_msg(_userid, client.sockfd_, base, 0);
+				uint64_t msg_id = 0;
+				if (base.command_id == IMCHAT_PERSONAL_NOTIFY) {
+					IMChat_Personal_Notify im_notify;
+					if (!im_notify.ParseFromArray(base.body.get(), base.length)) {
+						LOGERROR(base.command_id, base.seq_id, "ConsumeHistoryMessage包解析错误");
+						return;
+					}
+					const IMChat_Personal& im = im_notify.imchat();
+					msg_id = im.msg_id();
+					LOGD("offline msg_id(%ld):%s to user_id(%d)", msg_id, im.body().c_str(), _userid);
+				}
+				need_send_msg(_userid, client.sockfd_, base, msg_id);
+
 			}
 		}
 	}
@@ -985,6 +1078,20 @@ bool ConnectionServer::find_client_by_userid(int _userid, ClientObject &_client,
     return false;
 }
 
+bool ConnectionServer::find_client_by_userid(int _userid, ClientObject * _client, bool is_set_offline)
+{
+	std::lock_guard<std::recursive_mutex> lock_1(user_map_mutex_);
+	auto it = user_map_.find(_userid);
+	if (it != user_map_.end()) {
+		_client = &it->second;
+		if (is_set_offline) {
+			it->second.online_status_ = OnlineStatus_Offline;
+		}
+		return true;
+	}
+	return false;
+}
+
 void ConnectionServer::set_user_state(int _userid, OnlineStatus state)
 {
 	std::lock_guard<std::recursive_mutex> lock_1(user_map_mutex_);
@@ -1027,7 +1134,7 @@ bool ConnectionServer::need_send_msg(int _userid, int _sockfd, PDUBase& _base, u
 	Ackmsg* ackmsg = new Ackmsg(msg_id, _base);
 	{
 		//std::lock_guard<std::recursive_mutex> lock1(m_send_msg_mutex_);
-		CAutoRWLock lock(&m_rwlock_, 'w');
+	//	CAutoRWLock lock(&m_rwlock_, 'w');
 		auto it = m_send_msg_map_.find(_userid);
 		if (it != m_send_msg_map_.end() && !it->second.empty()) {
 			it->second.push_back(ackmsg);//not send
@@ -1041,17 +1148,19 @@ bool ConnectionServer::need_send_msg(int _userid, int _sockfd, PDUBase& _base, u
 
 			}
 			else if (it->second.empty()) {
-				it->second.push_back(ackmsg);//not send
+				it->second.push_back(ackmsg);
+				
 
 			}
 		}
 	}
 	Send(_sockfd, _base);
 	record_waiting_ackmsg(_userid, msg_id);//msg_id not use;
+	return true;
 }
 
 void ConnectionServer::record_waiting_ackmsg(int _userid,  uint64_t msg_id) {
-	std::lock_guard<std::recursive_mutex> lock(m_ack_msg_mutex_);
+	//std::lock_guard<std::recursive_mutex> lock(m_ack_msg_mutex_);
 	m_ack_msg_map_.push(_userid, time(0));
 }
 
@@ -1085,9 +1194,9 @@ void ConnectionServer::check_send_msg()
 		}
 	}
 		//std::lock_guard<std::recursive_mutex> lock1(m_send_msg_mutex_);
-	CAutoRWLock lock(&m_rwlock_, 'w');
+	//CAutoRWLock lock(&m_rwlock_, 'w');
 	for (auto it = offline_users.begin(); it != offline_users.end();it++ ) {
-		auto mit = m_send_msg_map_.find(*it);
+		/*auto mit = m_send_msg_map_.find(*it);
 		if (mit != m_send_msg_map_.end()) {
 			std::list<Ackmsg*>& msg_list = mit->second;
 			LOGD("user_id(%d) offline msg num:%d",*it, msg_list.size());
@@ -1099,8 +1208,79 @@ void ConnectionServer::check_send_msg()
 			set_user_state(*it, OnlineStatus_Offline);
 			//remove user send msg list;
 			m_send_msg_map_.erase(*it);
-		}
+		}*/
+		PDUBase* pdu = new PDUBase;
+		pdu->command_id = 0;
+		pdu->terminal_token = *it;
+		m_chat_msg_process.addJob(0, pdu,1);
+
 	}
+}
+
+void ConnectionServer::ack_timeout_handler(int user_id)
+{
+	LOGD("handler ack timeout");
+	ClientObject* object;
+	if (find_client_by_userid(user_id, object)) {
+		int cur_time = time(0);
+		//if recv ack inner MSG_ACK_TIME return
+		 if (cur_time - object->ack_time < MSG_ACK_TIME ) {
+			return;
+		}
+		 else if (cur_time - object->online_time < MSG_ACK_TIME && object->send_pending==1) {// user online ,but not recv ack send again
+			 auto it = m_send_msg_map_.find(user_id);
+			 if (it != m_send_msg_map_.end()) {//last msg is waiting for ack
+				 if (!it->second.empty()) {
+					
+					Ackmsg* ackmsg = it->second.front();
+					 LOGD("try again send msg_id(%ld)", ackmsg->msg_id);
+					 Send(object->sockfd_, ackmsg->pdu);//ignore send result,if fail 
+					 object->send_pending = 1;
+					 record_waiting_ackmsg(user_id, ackmsg->msg_id);
+					 
+				 }
+			 }
+		 }
+		 else {//save offline msg
+			 char* data;
+			 auto it = m_send_msg_map_.find(user_id);
+			 if (it != m_send_msg_map_.end()) {//last msg is waiting for ack
+				
+				 std::list<Ackmsg*>& msg_list = it->second;
+				 for (auto msg_it = msg_list.begin(); msg_it != msg_list.end(); msg_it++) {
+					 int len = OnPduPack((*msg_it)->pdu, data);
+					 if (len > 0) {
+						 m_offline_works->enqueue(&ConnectionServer::SaveOfflineMsg_, this, user_id, data, len);
+					 }
+					 //	SaveOfflineMsg(*it, (*msg_it)->pdu);//save timeout user msg
+					 delete *msg_it;
+
+				 }
+			 }
+		 }
+	}
+	else {
+		LOGE("not find user_id(%d)", user_id);
+	}
+
+}
+
+void ConnectionServer::storage_common_msg(SaveIMObject * object)
+{
+	std::string  tmp = object->ToJson();
+	redis_client.InsertIMtoRedis(tmp);
+	delete object;
+}
+
+void ConnectionServer::storage_apple_msg(std::string * object)
+{
+	redis_client.InsertIMPushtoRedis(*object);
+	delete object;
+}
+
+void ConnectionServer::storage_broadoffline_msg(std::string user, std::string msg_id)
+{
+	redis_client.InsertBroadcastOfflineIMtoRedis(user, msg_id);
 }
 
 
@@ -1212,6 +1392,7 @@ void ConnectionServer::LoginUtil(Socketfd_t _sockfd, UserId_t _userid) {
     client_object.device_id_ = "";
     client_object.device_type_ = DeviceType_UNKNOWN;
     client_object.online_status_ = OnlineStatus_Connect;
+	client_object.online_time = time(0);
     std::string phone = "";
    
     if (!UserIdQueryPhone(_userid, phone)) {

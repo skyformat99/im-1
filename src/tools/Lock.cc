@@ -1,4 +1,4 @@
-﻿#include "Lock.h"
+﻿#include "lock.h"
 CLock::CLock()
 {
 	init_mutex(m_lock);

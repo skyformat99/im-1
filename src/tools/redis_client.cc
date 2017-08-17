@@ -215,7 +215,7 @@ bool RedisClient::GetChannelUserList(const std::string & key, int start, int sto
 	return bValue;
 }
 
-bool RedisClient::InsertIMtoRedis(std::string _imjson) {
+bool RedisClient::InsertIMtoRedis(std::string& _imjson) {
     redisContext *context = NULL;
     std::string outdata = "";
     const char *key = "Imlist";
@@ -235,7 +235,7 @@ bool RedisClient::InsertIMtoRedis(std::string _imjson) {
     return bValue;
 }
 
-bool RedisClient::InsertIMPushtoRedis(std::string _imjson) {
+bool RedisClient::InsertIMPushtoRedis(std::string& _imjson) {
     redisContext *context = NULL;
     std::string outdata = "";
     const char *key = "ImPushList";

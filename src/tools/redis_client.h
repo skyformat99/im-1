@@ -23,8 +23,8 @@ public:
 
 public:
     bool IsHuxinUser(std::string _phone);
-    bool InsertIMtoRedis(std::string _imjson);
-    bool InsertIMPushtoRedis(std::string _imjson);
+    bool InsertIMtoRedis(std::string& _imjson);
+    bool InsertIMPushtoRedis(std::string& _imjson);
     bool InsertUserSessionToRedis(int _userid, std::string _session);
     bool InsertOfflineIMtoRedis(int _userid, const char *_encode_im);
 	bool InsertBroadcastOfflineIMtoRedis(const std::string & _userid, const std::string & _channel);

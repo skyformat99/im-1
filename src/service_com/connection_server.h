@@ -15,15 +15,16 @@
 #include <atomic>
 #include <ackMsgMap.h>
 #include <Lock.h>
-#include <ThreadPool.h>
+#include <msgProcess.h>
+#include <time_util.h>
 #define NEW_VERSION                   1
 #define MSG_ACK_TIME                  5
 
-
+#define  CHAT_MSG_THREAD_NUM         5
 using namespace com::proto::basic;
 using namespace com::proto::user;
 using namespace com::proto::route;
-
+using namespace TimeUtil;
 typedef std::unordered_map<Socketfd_t, UserId_t> Socket_Userid_Map_t;
 typedef std::unordered_map<UserId_t, ClientObject> User_Connect_Map_t;
 typedef std::unordered_map<UserId_t, std::list<PDUBase> > Send_Queue_t;
@@ -31,15 +32,20 @@ typedef std::unordered_map<std::string, UserId_t > Phone_userid_t;
 
 class Ackmsg {
 public:
-	Ackmsg(uint64_t msg_id_, PDUBase& pdu_):msg_id(msg_id_), pdu(pdu_){}
+	Ackmsg(uint64_t msg_id_, PDUBase& pdu_) :msg_id(msg_id_), pdu(pdu_) {
+		ms = get_mstime();
+		
+	}
 	uint64_t    msg_id;
 	PDUBase      pdu;
+	long long    ms;
 };
 class ConnectionServer:public TcpServer {
 public:
-    ConnectionServer();
+    
+	static ConnectionServer* getInstance();
 	int init();
-	void StartServer(std::string _ip, short _port);
+	void start();
 
 	virtual void OnRecv(int _sockfd, PDUBase* _base);
     virtual void OnConn(int _sockfd);
@@ -47,7 +53,7 @@ public:
 	virtual void OnSendFailed(PDUBase &_data);
 
 	int PreProcessPack(int _sockfd, int _userid, PDUBase &_base);
-	void ProcessClientMsg(int _sockfd, PDUBase*  _base);
+	
 	
 	
 	void ProcessRegistRsp(PDUBase & _pack);
@@ -100,9 +106,12 @@ public:
 	int getOnliners();
 	void reportOnliners();
 private:
-
+	ConnectionServer();
+	
+	static void ProcessClientMsg(int _sockfd, PDUBase*  _base);
     bool find_userid_by_sockfd(int _sockfd, int &_userid, bool is_del = false);
     bool find_client_by_userid(int _userid, ClientObject &_client, bool is_set_offline = false);
+	bool find_client_by_userid(int _userid, ClientObject* _client, bool is_set_offline = false);
 	void set_user_state(int _userid, OnlineStatus state);
 	int get_user_state(int _userid);
 	uint64_t getMsgId();
@@ -115,6 +124,13 @@ private:
 	void delete_ack_msg(int _userid, uint64_t msg_id);
     static void check_msg(ConnectionServer* s);
     void check_send_msg();
+	//handler ack timeout 
+	void ack_timeout_handler(int userid);
+
+	//storage msg
+	void storage_common_msg(SaveIMObject* object);
+	void storage_apple_msg(std::string* object);
+	void storage_broadoffline_msg(std::string user, std::string msg_id);
 private:
     // 本服务器的ip和端口
     std::string ip_;
@@ -133,6 +149,7 @@ private:
 	std::atomic_int    onliners_;
 private:
 	int        ack_time_;
+	RedisClient redis_client;
     RouteClient route_client_;
 	LoadBalanceClient  loadbalance_client_;
     User_Connect_Map_t user_map_;
@@ -155,7 +172,7 @@ private:
 	//send msg
 	std::map<int, std::list<Ackmsg*>>  m_send_msg_map_;
 	//std::recursive_mutex               m_send_msg_mutex_;
-	CRWLock                            m_rwlock_;
+	//CRWLock                            m_rwlock_;
 
 	//wait ack userid
 	AckMsgMap<int, int>         m_ack_msg_map_;
@@ -170,7 +187,14 @@ private:
 	atomic_ullong               m_total_recv_pkt;
 
 	ThreadPool*                 m_offline_works ;
+	ThreadPool*                 m_route_works;
+	ThreadPool*                 m_storage_msg_works;
+
 	
+	MsgProcess                  m_chat_msg_process;
+	
+	MsgProcess                 m_common_msg_process;
+
 };
 
 #endif

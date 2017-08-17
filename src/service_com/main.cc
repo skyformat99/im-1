@@ -4,7 +4,7 @@
 #include <thread>
 #include <unistd.h>
 #include <iostream>
-#include "main.h"
+
 #include "config_file_reader.h"
 #include <log_util.h>
 #include <signal.h>
@@ -19,9 +19,7 @@ int total_user_login;
 std::atomic_int offline_msg;
 int route_msg;
 uint32_t send_success_pkts;
-ConnectionServer connect_server;
-RedisClient redis_client;
-ThreadPool thread_pool(CONNECTPOOL_AND_THREADPOOL_NUMBER);
+
 
 static char*   im_signal;
 
@@ -151,16 +149,7 @@ int daemon() {
 
 	return 0;
 }
-void start_server() {
-    // 读取公共配置信息
-    ConfigFileReader reader(CONF_PUBLIC_URL);
-    // 初始化Redis连接池
-    redis_client.Init_Pool(reader.ReadString(CONF_REDIS_IP), reader.ReadInt(CONF_REDIS_PORT),
-                           reader.ReadString(CONF_REDIS_AUTH), CONNECTPOOL_AND_THREADPOOL_NUMBER);
-    redis_client.SetKeysExpire(reader.ReadInt(CONF_REDIS_EXPIRE));
-    // 启动epoll，此为线程阻塞IO
-    connect_server.StartServer(reader.ReadString(CONF_COM_IP), reader.ReadInt(CONF_COM_PORT));
-}
+
 void count(){
 	while(1){
 	    sleep(1);
@@ -180,11 +169,15 @@ int main(int argc, char *argv[]) {
 	}
     signal(SIGPIPE,SIG_IGN);
 	initLog(CONF_LOG);
-	connect_server.init();
+	ConnectionServer* pServer = ConnectionServer::getInstance();
+	if (pServer->init() == -1) {
+		LOGE("connect init fail");
+		return -1;
+	}
 //    std::thread count_thread=std::thread(count);
   //  count_thread.detach();
 
-	start_server();
+	pServer->start();
 
     return 0;
 }

@@ -16,6 +16,9 @@ public:
 	// 向首部压入
 	void push(const K& key, const V& value)
 	{
+		if (m_nodemap.find(key) != m_nodemap.end()) {
+			return;
+		}
 		m_head = new Node(key, value, NULL, m_head);
 		if (m_head->m_next)
 			m_head->m_next->m_prev = m_head;
