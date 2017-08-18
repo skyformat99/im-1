@@ -536,8 +536,9 @@ void ConnectionServer::ProcessChatMsg_ack(int _sockfd, PDUBase & _base) {
 	if (it != m_send_msg_map_.end()) {//last msg is waiting for ack
 		if (!it->second.empty()) {
 			Ackmsg* ackmsg=it->second.front();
-			if (ackmsg->msg_id != msg_id) {
+			if (ackmsg->msg_id != msg_id && ackmsg->msg_id!=0) {
 				LOGD("user_id(%d) rsp error ack msg_id(%ld)", user_id, msg_id);//because of user having recving the pkt even if msg_id not true. we continue send it next msg due to the using online
+				return ;
 			}
 			LOGD("msg_id(%ld)  ack latency time %d ms,send latency time:%d ms", msg_id,cur_ms- target->send_time, cur_ms - ackmsg->ms);
 			delete ackmsg;
@@ -961,6 +962,7 @@ void ConnectionServer::ConsumeHistoryMessage(UserId_t _userid) {
 						msg_id = im.msg_id();
 						LOGD("offline msg_id(%ld):%s to user_id(%d)", msg_id, im.body().c_str(), _userid);
 					}
+					
 					need_send_msg(_userid, client.sockfd_, base, msg_id);
 
 				}
