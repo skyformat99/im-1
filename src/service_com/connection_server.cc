@@ -537,7 +537,7 @@ void ConnectionServer::ProcessChatMsg_ack(int _sockfd, PDUBase & _base) {
 		if (!it->second.empty()) {
 			Ackmsg* ackmsg=it->second.front();
 			if (ackmsg->msg_id != msg_id) {
-				LOGD("user_id(%d) rsp error ack msg_id(%d)", user_id, msg_id);//because of user having recving the pkt even if msg_id not true. we continue send it next msg due to the using online
+				LOGD("user_id(%d) rsp error ack msg_id(%ld)", user_id, msg_id);//because of user having recving the pkt even if msg_id not true. we continue send it next msg due to the using online
 			}
 			LOGD("msg_id(%ld)  ack latency time %d ms,send latency time:%d ms", msg_id,cur_ms- target->send_time, cur_ms - ackmsg->ms);
 			delete ackmsg;
@@ -950,7 +950,7 @@ void ConnectionServer::ConsumeHistoryMessage(UserId_t _userid) {
 			}
 			else {
 				uint64_t msg_id = 0;
-				if (base.command_id == IMCHAT_PERSONAL_NOTIFY) {
+				if (base.command_id==IMCHAT_PERSONAL || base.command_id == IMCHAT_PERSONAL_NOTIFY ) {
 					IMChat_Personal_Notify im_notify;
 					if (!im_notify.ParseFromArray(base.body.get(), base.length)) {
 						LOGERROR(base.command_id, base.seq_id, "ConsumeHistoryMessage包解析错误");
@@ -1133,7 +1133,8 @@ bool ConnectionServer::need_send_msg(int _userid, int _sockfd, PDUBase& _base, u
 {
 	ClientObject* target;
 	if (!find_client_by_userid(_userid, target)) {
-		return;
+        LOGE("not find user_id(%d),send fail",_userid);
+		return false;
 	}
 
 	Ackmsg* ackmsg = new Ackmsg(msg_id, _base);
@@ -1235,7 +1236,8 @@ void ConnectionServer::ack_timeout_handler(int user_id)
 	if (find_client_by_userid(user_id, object)) {
 		int cur_time = time(0);
 		//if recv ack inner MSG_ACK_TIME return
-		 if (cur_time - object->ack_time < MSG_ACK_TIME ) {
+		 if (get_mstime() - object->ack_time < MSG_ACK_TIME*1000 ) {
+            LOGD("recv ack inner timeout"); 
 			return;
 		}
 		 else if (cur_time - object->online_time < MSG_ACK_TIME && object->send_pending==1) {// user online ,but not recv ack send again
