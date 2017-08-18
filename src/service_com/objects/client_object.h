@@ -33,7 +33,8 @@ public:
 
 
 	time_t          online_time; //online time;
-	time_t          ack_time;
+	long long       ack_time;
+	long long       send_time;
 	int             send_pending;//send but recv ack num;
 };
 

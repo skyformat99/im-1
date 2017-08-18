@@ -114,6 +114,9 @@ void  LogImpl(LogLevel level, const char* filename, int line, const char* format
 	case Level_Warning:
 		s_log->warn(msg);
 		break;
+	case Level_Info:
+		s_log->info(msg);
+		break;
 	case Level_Debug:
 		s_log->debug(msg);
 		break;

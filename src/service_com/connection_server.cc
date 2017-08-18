@@ -419,7 +419,7 @@ void ConnectionServer::ProcessIMChat_Personal(int _sockfd, PDUBase&  _base) {
 	// 以服务器收到消息的时间为准
 	im.set_timestamp(TimeUtil::timestamp_int());
 	uint64_t msg_id = getMsgId();
-	LOGD("IM type:%d，from:%s to:%s (msg_id:%ld)", im.content_type(), im.src_phone().c_str(), im.target_phone().c_str(), msg_id);
+	LOGI("IM type:%d，from:%s to:%s (msg_id:%ld)", im.content_type(), im.src_phone().c_str(), im.target_phone().c_str(), msg_id);
 	if (im.content_type() == 1) {
 		LOGD("content msg:%s", im.body().c_str());
 	}
@@ -442,14 +442,14 @@ void ConnectionServer::ProcessIMChat_Personal(int _sockfd, PDUBase&  _base) {
 		}
 
 		ReplyChatResult(_sockfd, _base, ERRNO_CODE_OK, is_target_online,msg_id);
-		LOGD("user[user_id:%d,phone:%s]%s", dst_userid, im.target_phone().c_str(), is_target_online ? "在线" : "离线，保存消息");
-
+		
 		im.set_target_user_id(dst_userid);
 		im.set_target_user_type(USER_TYPE_PERSONAL);
 		im.set_msg_id(msg_id);
 		ResetPackBody(_base, im, IMCHAT_PERSONAL);
 
 		if (is_target_online) {
+			LOGI("user[user_id:%d,phone:%s]%s", dst_userid, im.target_phone().c_str(), "online");
 			if (local_online) {
 				_base.terminal_token = dst_userid;
 				ProcessIMChat_fromRoute(_base);
@@ -472,7 +472,7 @@ void ConnectionServer::ProcessIMChat_Personal(int _sockfd, PDUBase&  _base) {
 			_base.seq_id = 0;
 			im_notify.release_imchat();
 			SaveOfflineMsg(dst_userid, _base);
-			LOGD("user[user_id:%d,phone:%s]  offline，save offline msg", dst_userid, im.target_phone().c_str());
+			LOGI("user[user_id:%d,phone:%s]  offline，save offline msg", dst_userid, im.target_phone().c_str());
 		}
 		
 	}
@@ -525,7 +525,8 @@ void ConnectionServer::ProcessChatMsg_ack(int _sockfd, PDUBase & _base) {
 	if (!find_client_by_userid(user_id, target)) {
 		return;
 	}
-	target->ack_time = time(0);
+	long long cur_ms = get_mstime();
+	target->ack_time = cur_ms;
 	uint64_t msg_id = ack.msg_id();
 	LOGD("recv user_id(%d) ack msg(%ld)", user_id, msg_id);
 	
@@ -538,7 +539,7 @@ void ConnectionServer::ProcessChatMsg_ack(int _sockfd, PDUBase & _base) {
 			if (ackmsg->msg_id != msg_id) {
 				LOGD("user_id(%d) rsp error ack msg_id(%d)", user_id, msg_id);//because of user having recving the pkt even if msg_id not true. we continue send it next msg due to the using online
 			}
-			LOGD("msg_id(%ld)  ack latency time %d ms", msg_id,get_mstime() - ackmsg->ms);
+			LOGD("msg_id(%ld)  ack latency time %d ms,send latency time:%d ms", msg_id,cur_ms- target->send_time, cur_ms - ackmsg->ms);
 			delete ackmsg;
 			it->second.pop_front();
             delete_ack_msg(user_id,msg_id);
@@ -548,6 +549,7 @@ void ConnectionServer::ProcessChatMsg_ack(int _sockfd, PDUBase & _base) {
                 LOGD("begin send msg_id(%ld)",ackmsg->msg_id);
 				Send(target->sockfd_, ackmsg->pdu);//ignore send result,if fail 
 				target->send_pending = 1;
+				target->send_time = cur_ms;
 				record_waiting_ackmsg(user_id, ackmsg->msg_id);
 			}
 		}
@@ -571,7 +573,7 @@ void ConnectionServer::ProcessIMChat_broadcast(int _sockfd, PDUBase & _base)
 		LOGERROR(_base.command_id, _base.seq_id, "Broadcast parse fail");
 		return;
 	}
-	LOGD("recv broadcat chat msg [msg_id:%s]", msg_id.c_str());
+	LOGI("recv broadcat chat msg [msg_id:%s]", msg_id.c_str());
 
 	std::string channel_msg = "channel_msg:" + msg_id;
 	::com::proto::chat::IMChat_Personal* im = im_notify.mutable_imchat();
@@ -585,7 +587,7 @@ void ConnectionServer::ProcessIMChat_broadcast(int _sockfd, PDUBase & _base)
 	
 		if (find_client_by_userid(*it, client)) {
 			if (client.online_status_ == OnlineStatus_Connect) {
-                LOGD("broadcast chat msg to user_id(%d)", *it);
+                LOGI("broadcast chat msg to user_id(%d)", *it);
 				im->set_target_user_id(*it);
 				im->set_target_phone(client.phone_);
 				_base.terminal_token = *it;
@@ -621,7 +623,7 @@ void ConnectionServer::ProcessBulletin_broadcast(int _sockfd, PDUBase & _base)
 	memcpy(pbody.get(), body.c_str(), body.length());
 	_base.body= pbody;
     _base.length=body.length();
-	LOGD("recv broadcat bulletin  msg [msg_id:%s]", msg_id.c_str());
+	LOGI("recv broadcat bulletin  msg [msg_id:%s]", msg_id.c_str());
 	std::string channel_msg = "channel_msg:" + msg_id;
 	Bulletin_Notify  notify;
     if (!notify.ParseFromArray(body.c_str(), body.length())) {
@@ -634,7 +636,7 @@ void ConnectionServer::ProcessBulletin_broadcast(int _sockfd, PDUBase & _base)
 		if (find_client_by_userid(*it, client)) {
 			if (client.online_status_ == OnlineStatus_Connect) {
 
-				LOGD("broadcast bulletin  msg to user_id(%d)", *it);
+				LOGI("broadcast bulletin  msg to user_id(%d)", *it);
 				_base.terminal_token = *it;
 				if (client.version != NEW_VERSION) {
 					if (!Send(client.sockfd_, _base)) {
@@ -825,7 +827,7 @@ void ConnectionServer::ProcessIMChat_fromRoute(PDUBase &_base) {
 			}
         } 
     } 
-		
+	LOGI("route:user[user_id:%d,phone:%s]  offline，save offline msg", im.target_user_id(), im.target_phone().c_str());
 	SaveOfflineMsg(im.target_user_id(), _base);
    
 }
@@ -1129,14 +1131,23 @@ uint64_t ConnectionServer::getMsgId()
 
 bool ConnectionServer::need_send_msg(int _userid, int _sockfd, PDUBase& _base, uint64_t msg_id)
 {
+	ClientObject* target;
+	if (!find_client_by_userid(_userid, target)) {
+		return;
+	}
+
 	Ackmsg* ackmsg = new Ackmsg(msg_id, _base);
 	{
 		//std::lock_guard<std::recursive_mutex> lock1(m_send_msg_mutex_);
 	//	CAutoRWLock lock(&m_rwlock_, 'w');
+		//if user send buffer_list not empty ,dont send again
 		auto it = m_send_msg_map_.find(_userid);
 		if (it != m_send_msg_map_.end() && !it->second.empty()) {
 			it->second.push_back(ackmsg);//not send
-			return false;
+			if (target->send_pending == 1) {
+				return false;
+			}
+			
 		}
 		else {
 			if (it == m_send_msg_map_.end()) {
@@ -1152,6 +1163,8 @@ bool ConnectionServer::need_send_msg(int _userid, int _sockfd, PDUBase& _base, u
 			}
 		}
 	}
+	target->send_pending = 1;
+	target->send_time = get_mstime();
 	Send(_sockfd, _base);
 	record_waiting_ackmsg(_userid, msg_id);//msg_id not use;
 	return true;
@@ -1256,6 +1269,7 @@ void ConnectionServer::ack_timeout_handler(int user_id)
 				 }
                  m_send_msg_map_.erase(it);
 			 }
+			 LOGD("timeout recv ack user_id(%d),set status offline",user_id);
              set_user_state(user_id, OnlineStatus_Offline);
 		 }
 	}
