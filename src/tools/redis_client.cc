@@ -90,7 +90,7 @@ bool RedisClient::GetBroadcastOfflineIMList(int _userid, std::list<std::string>&
 				_out_list.push_back(outdata);
 			}
 		}
-		if (_out_list.size() > 0) bValue = true;
+		if (!_out_list.empty()) bValue = true;
 
 	}
 	return bValue;
@@ -105,7 +105,7 @@ bool RedisClient::GetIMUserList(std::list<std::string> &_keys) {
 	if (context) {
 		if (SelectDB(context, DB_INDEX_IMUSER)) {
 			GetKeysFromHash(context, hash_name.c_str(), _keys);
-			if (_keys.size() > 0) {
+			if (!_keys.empty() > 0) {
 				bValue = true;
 			}
 		}
@@ -366,7 +366,7 @@ bool RedisClient::GetOfflineIMList(int _userid, std::list<std::string> &_encode_
 				_encode_imlist.push_back(outdata);
 			}
 		}
-		if (_encode_imlist.size() > 0) bValue = true;
+		if (!_encode_imlist.empty()) bValue = true;
 
 	}
     return bValue;

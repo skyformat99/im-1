@@ -926,129 +926,130 @@ void ConnectionServer::ConsumeHistoryMessage(UserId_t _userid) {
     PDUBase base;
 	std::list<std::string> encode_imlist;
 	if (redis_client.GetOfflineIMList(_userid, encode_imlist)) {
-	
-	LOGD("user_id(%d) have %d offline chatmsg",_userid, encode_imlist.size());
-	
-	for (auto item = encode_imlist.begin(); item != encode_imlist.end(); item++) {
-		if (item->length() > 3000) continue;
 
-		memset(base64_data.get(), 0, 4096);
-		int base64_size = base64_decode(base64_data.get(), item->c_str(), item->length());
-		if (base64_size > 0 && OnPduParse(base64_data.get(), base64_size, base) > 0) {
-		//	ProcessIMChat_fromRoute(base);
-			/*IMChat_Personal_Notify im_notify;
-			if (!im_notify.ParseFromArray(base.body.get(), base.length)) {
+		LOGD("user_id(%d) have %d offline chatmsg", _userid, encode_imlist.size());
+
+		for (auto item = encode_imlist.begin(); item != encode_imlist.end(); item++) {
+			if (item->length() > 3000) continue;
+
+			memset(base64_data.get(), 0, 4096);
+			int base64_size = base64_decode(base64_data.get(), item->c_str(), item->length());
+			if (base64_size > 0 && OnPduParse(base64_data.get(), base64_size, base) > 0) {
+				//	ProcessIMChat_fromRoute(base);
+				/*IMChat_Personal_Notify im_notify;
+				if (!im_notify.ParseFromArray(base.body.get(), base.length)) {
 				LOGERROR(base.command_id, base.seq_id, "ConsumeHistoryMessage包解析错误");
 				return;
-			}
-			const IMChat_Personal& im = im_notify.imchat();*/
-			
-			if (client.version != NEW_VERSION) {
-				if (!Send(client.sockfd_, base)) {
-					OnSendFailed(base);
 				}
-			}
-			else {
-				uint64_t msg_id = 0;
-				if (base.command_id == IMCHAT_PERSONAL_NOTIFY) {
-					IMChat_Personal_Notify im_notify;
-					if (!im_notify.ParseFromArray(base.body.get(), base.length)) {
-						LOGERROR(base.command_id, base.seq_id, "ConsumeHistoryMessage包解析错误");
-						return;
-					}
-					const IMChat_Personal& im = im_notify.imchat();
-					msg_id = im.msg_id();
-					LOGD("offline msg_id(%ld):%s to user_id(%d)", msg_id, im.body().c_str(), _userid);
-				}
-				need_send_msg(_userid, client.sockfd_, base, msg_id);
+				const IMChat_Personal& im = im_notify.imchat();*/
 
+				if (client.version != NEW_VERSION) {
+					if (!Send(client.sockfd_, base)) {
+						OnSendFailed(base);
+					}
+				}
+				else {
+					uint64_t msg_id = 0;
+					if (base.command_id == IMCHAT_PERSONAL_NOTIFY) {
+						IMChat_Personal_Notify im_notify;
+						if (!im_notify.ParseFromArray(base.body.get(), base.length)) {
+							LOGERROR(base.command_id, base.seq_id, "ConsumeHistoryMessage包解析错误");
+							return;
+						}
+						const IMChat_Personal& im = im_notify.imchat();
+						msg_id = im.msg_id();
+						LOGD("offline msg_id(%ld):%s to user_id(%d)", msg_id, im.body().c_str(), _userid);
+					}
+					need_send_msg(_userid, client.sockfd_, base, msg_id);
+
+				}
 			}
 		}
+
 	}
-    }
-	
 	std::list<std::string> channel_list;
-	redis_client.GetBroadcastOfflineIMList(_userid, channel_list);
-	LOGD("user_id(%d) broadcast msg :%d",_userid,channel_list.size());
-	for (auto it = channel_list.begin(); it != channel_list.end(); ++it) {
-		LOGD("channel:%s",(*it).c_str());
-		std::string chat_msg = redis_client.GetBroadcastMsg(*it);
-		if (chat_msg == "") {
-			LOGD("not find channel:%s msg", (*it).c_str());
-			return;
-		}
-		std::string tmp_msg_id=(*it).substr((*it).find(":") + 1);
-		uint32_t msg_id = atoi(tmp_msg_id.c_str());
-		Json::Reader reader;
-		Json::Value root;
-		if (!reader.parse(chat_msg, root)) {
-			LOGE(" parse fail");
-			return;
-		}
-		int cmd = atoi(root["CommandId"].asString().c_str());
-		::google::protobuf::Message* notify;
+	if (redis_client.GetBroadcastOfflineIMList(_userid, channel_list)) {
+		LOGD("user_id(%d) have %d broadcast msg ", _userid, channel_list.size());
+		for (auto it = channel_list.begin(); it != channel_list.end(); ++it) {
+			LOGD("channel:%s", (*it).c_str());
+			std::string chat_msg = redis_client.GetBroadcastMsg(*it);
+			if (chat_msg == "") {
+				LOGD("not find channel:%s msg", (*it).c_str());
+				return;
+			}
+			std::string tmp_msg_id = (*it).substr((*it).find(":") + 1);
+			uint32_t msg_id = atoi(tmp_msg_id.c_str());
+			Json::Reader reader;
+			Json::Value root;
+			if (!reader.parse(chat_msg, root)) {
+				LOGE(" parse fail");
+				return;
+			}
+			int cmd = atoi(root["CommandId"].asString().c_str());
+			::google::protobuf::Message* notify;
 			IMChat_Personal im;
 			IMChat_Personal_Notify im_notify;
 			Bulletin_Notify  bulletin_notify;
-		if (cmd == IMCHAT_PERSONAL) {
-			notify = &im_notify;
-			im.set_msg_id(msg_id);
-			im.set_src_usr_id(atoi(root["SvcUsrId"].asString().c_str()));
-			im.set_src_phone(root["SvcPhone"].asString());
-			im.set_content_type(atoi(root["ContentType"].asString().c_str()));
-			im.set_command_id(atoi(root["CommandId"].asString().c_str()));
-			im.set_body(root["Body"].asString());
-			im.set_target_user_type(USER_TYPE_PERSONAL);
-			im.set_timestamp(root["Timestamp"].asInt());
-			LOGD("broadcast offline chat msg[ msg_id:%s] to user_id:%d", (*it).c_str(),_userid);
-			ClientObject client;
-			if (!find_client_by_userid(_userid, client)) {
-				return;
+			if (cmd == IMCHAT_PERSONAL) {
+				notify = &im_notify;
+				im.set_msg_id(msg_id);
+				im.set_src_usr_id(atoi(root["SvcUsrId"].asString().c_str()));
+				im.set_src_phone(root["SvcPhone"].asString());
+				im.set_content_type(atoi(root["ContentType"].asString().c_str()));
+				im.set_command_id(atoi(root["CommandId"].asString().c_str()));
+				im.set_body(root["Body"].asString());
+				im.set_target_user_type(USER_TYPE_PERSONAL);
+				im.set_timestamp(root["Timestamp"].asInt());
+				LOGD("broadcast offline chat msg[ msg_id:%s] to user_id:%d", (*it).c_str(), _userid);
+				ClientObject client;
+				if (!find_client_by_userid(_userid, client)) {
+					return;
+				}
+
+				im.set_target_user_id(_userid);
+				im.set_target_phone(client.phone_);
+				im_notify.set_allocated_imchat(&im);
+			}
+			else if (cmd == BULLETIN) {
+				LOGD("broadcast offline bulletin msg [ msg_id:%s ] to user_id:%d", (*it).c_str(), _userid);
+				Bulletin bul;
+				notify = &bulletin_notify;
+				bul.set_bulletin_id(msg_id);
+				bul.set_content(root["Body"].asString());
+				bul.set_publish_time(root["Timestamp"].asInt());
+				bul.set_publisher_id(atoi(root["SvcUsrId"].asString().c_str()));
+				bul.set_bulletin_type((Bulletin_Type)atoi(root["ContentType"].asString().c_str()));
+				bul.set_publisher_phone(root["SvcPhone"].asString());
+				auto it = bulletin_notify.add_bulletins();
+				it->CopyFrom(bul);
+			}
+			PDUBase _pack;
+			std::shared_ptr<char> body(new char[notify->ByteSize()], carray_deleter);
+			notify->SerializeToArray(body.get(), notify->ByteSize());
+			_pack.terminal_token = _userid;
+			_pack.body = body;
+			_pack.length = notify->ByteSize();
+
+			if (cmd == BULLETIN) {
+				_pack.command_id = BULLETIN_NOTIFY;
+			}
+			else {
+				_pack.command_id = atoi(root["CommandId"].asString().c_str());
+			}
+			if (client.version != NEW_VERSION) {
+				if (!Send(client.sockfd_, _pack)) {
+					OnSendFailed(_pack);
+				}
+			}
+			else {
+				need_send_msg(_userid, client.sockfd_, _pack, msg_id);
 			}
 
-			im.set_target_user_id(_userid);
-			im.set_target_phone(client.phone_);
-			im_notify.set_allocated_imchat(&im);
-		}
-		else if(cmd== BULLETIN){
-			LOGD("broadcast offline bulletin msg [ msg_id:%s ] to user_id:%d", (*it).c_str(), _userid);
-			Bulletin bul;
-			notify = &bulletin_notify;
-			bul.set_bulletin_id(msg_id);
-			bul.set_content(root["Body"].asString());
-			bul.set_publish_time(root["Timestamp"].asInt());
-			bul.set_publisher_id(atoi(root["SvcUsrId"].asString().c_str()));
-			bul.set_bulletin_type((Bulletin_Type)atoi(root["ContentType"].asString().c_str()));
-			bul.set_publisher_phone(root["SvcPhone"].asString());
-            auto it=bulletin_notify.add_bulletins();
-            it->CopyFrom(bul);
-		}
-		PDUBase _pack;
-		std::shared_ptr<char> body(new char[notify->ByteSize()], carray_deleter);
-		notify->SerializeToArray(body.get(), notify->ByteSize());
-        _pack.terminal_token=_userid;
-		_pack.body = body;
-		_pack.length = notify->ByteSize();
-
-        if(cmd==BULLETIN){
-		    _pack.command_id = BULLETIN_NOTIFY;
-        }
-        else{
-			_pack.command_id = atoi(root["CommandId"].asString().c_str());
-        }
-		if (client.version != NEW_VERSION) {
-			if (!Send(client.sockfd_, _pack)) {
-				OnSendFailed(_pack);
+			if (cmd == IMCHAT_PERSONAL) {
+				im_notify.release_imchat();
 			}
 		}
-		else {
-			need_send_msg(_userid, client.sockfd_, _pack, msg_id);
-		}
-		
-        if(cmd==IMCHAT_PERSONAL){
-            im_notify.release_imchat();
-        }
-    }
+	}
 }
 
 
