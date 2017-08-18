@@ -156,7 +156,7 @@ void IMClient::OnLogin(int _sockfd)
 	login.set_phone(user->msisdn);
 	login.set_pwd(user->passwd);
 	login.set_session_id(user->sessid);
-//    login.set_version(1);
+    login.set_version(1);
 	PDUBase _pack;
 	_pack.command_id = USER_LOGIN;
 	std::shared_ptr<char> body(new char[login.ByteSize()]);

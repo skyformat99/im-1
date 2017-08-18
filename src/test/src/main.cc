@@ -50,8 +50,8 @@ int main(int argc,char** argv) {
         printf("please input ip and port\n");
         return 0;
     }
-    char ip[]="10.44.125.101";
-    char auth[]="hoohoo";
+    char ip[]="192.168.0.14";
+    char auth[]="ym1234";
     redis_client.Init_Pool(ip,6380,auth,1);
 	std::list<std::string> keys;
 

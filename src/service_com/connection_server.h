@@ -114,7 +114,7 @@ private:
 	static void ProcessClientMsg(int _sockfd, PDUBase*  _base);
     bool find_userid_by_sockfd(int _sockfd, int &_userid, bool is_del = false);
     bool find_client_by_userid(int _userid, ClientObject &_client, bool is_set_offline = false);
-	bool find_client_by_userid(int _userid, ClientObject* _client, bool is_set_offline = false);
+	bool find_client_by_userid(int _userid, ClientObject*& _client, bool is_set_offline = false);
 	void set_user_state(int _userid, OnlineStatus state);
 	int get_user_state(int _userid);
 	uint64_t getMsgId();

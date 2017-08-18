@@ -56,14 +56,6 @@ int ConnectionServer::init()
 		reader.ReadString(CONF_REDIS_AUTH) );
 	redis_client.SetKeysExpire(reader.ReadInt(CONF_REDIS_EXPIRE));
 
-	if (route_client_.Connect(route_ip_.c_str(), route_port_)) {
-		LOGE("connect route server fail");
-		return -1;
-	}
-	if (loadbalance_client_.Connect(loadbalance_ip_.c_str(), loadbalance_port_)) {
-		LOGE("connect loadbalance server fail");
-		return -1;
-	}
 
 	
 	
@@ -82,6 +74,15 @@ int ConnectionServer::init()
 	m_offline_works = new ThreadPool(1); //save offline msg threads
 	m_route_works = new ThreadPool(2); //handler route msg;
 	m_storage_msg_works = new ThreadPool(1);//save msg redis;
+    sleep(1);
+	if (route_client_.Connect(route_ip_.c_str(), route_port_)) {
+		LOGE("connect route server fail");
+		return -1;
+	}
+	if (loadbalance_client_.Connect(loadbalance_ip_.c_str(), loadbalance_port_)) {
+		LOGE("connect loadbalance server fail");
+		return -1;
+	}
 }
 
 void ConnectionServer::start() {
@@ -1075,7 +1076,7 @@ bool ConnectionServer::find_client_by_userid(int _userid, ClientObject &_client,
     return false;
 }
 
-bool ConnectionServer::find_client_by_userid(int _userid, ClientObject * _client, bool is_set_offline)
+bool ConnectionServer::find_client_by_userid(int _userid, ClientObject * &_client, bool is_set_offline)
 {
 	std::lock_guard<std::recursive_mutex> lock_1(user_map_mutex_);
 	auto it = user_map_.find(_userid);
@@ -1253,7 +1254,9 @@ void ConnectionServer::ack_timeout_handler(int user_id)
 					 delete *msg_it;
 
 				 }
+                 m_send_msg_map_.erase(it);
 			 }
+             set_user_state(user_id, OnlineStatus_Offline);
 		 }
 	}
 	else {

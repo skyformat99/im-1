@@ -76,7 +76,10 @@ int TcpServer::StartClient(std::string _ip, short _port)
 	bzero(&serveraddr, sizeof(serveraddr));
 	serveraddr.sin_family = AF_INET;
 	const char *local_addr = _ip.c_str();
-	inet_aton(local_addr, &(serveraddr.sin_addr));
+	if(inet_aton(local_addr, &(serveraddr.sin_addr))==0){
+        LOGE("Invaild ip:%s",local_addr);
+        return -1;
+    }
 	serveraddr.sin_port = htons(_port);
 	if (connect(fd, (struct sockaddr*)&serveraddr, sizeof(serveraddr)) < 0){
 		LOGE("connect ip(%s) port(%d) fail,%s", _ip.c_str(), _port, strerror(errno));
