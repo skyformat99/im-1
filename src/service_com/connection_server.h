@@ -19,7 +19,8 @@
 #include <msgProcess.h>
 #include <time_util.h>
 #include <redis_client.h>
-#define NEW_VERSION                   1
+#define VERSION_0                   0    //sdk         
+#define VERSION_1                   1    //bulik msg not ack
 #define MSG_ACK_TIME                  5
 
 #define  CHAT_MSG_THREAD_NUM         5

@@ -537,7 +537,7 @@ void ConnectionServer::ProcessChatMsg_ack(int _sockfd, PDUBase & _base) {
 		if (!it->second.empty()) {
 			Ackmsg* ackmsg=it->second.front();
 			if (ackmsg->msg_id != msg_id) {
-				LOGD("user_id(%d) rsp error ack msg_id(%d)", user_id, msg_id);//because of user having recving the pkt even if msg_id not true. we continue send it next msg due to the using online
+				LOGD("user_id(%d) rsp error ack msg_id(%ld)", user_id, msg_id);//because of user having recving the pkt even if msg_id not true. we continue send it next msg due to the using online
 			}
 			LOGD("msg_id(%ld)  ack latency time %d ms,send latency time:%d ms", msg_id,cur_ms- target->send_time, cur_ms - ackmsg->ms);
 			delete ackmsg;
@@ -592,7 +592,7 @@ void ConnectionServer::ProcessIMChat_broadcast(int _sockfd, PDUBase & _base)
 				im->set_target_phone(client.phone_);
 				_base.terminal_token = *it;
 				ResetPackBody(_base, im_notify, IMCHAT_PERSONAL);
-				if (client.version != NEW_VERSION) {
+				if (client.version == VERSION_0) {
 					if (!Send(client.sockfd_, _base)) {
 						OnSendFailed(_base);
 					}
@@ -638,7 +638,7 @@ void ConnectionServer::ProcessBulletin_broadcast(int _sockfd, PDUBase & _base)
 
 				LOGI("broadcast bulletin  msg to user_id(%d)", *it);
 				_base.terminal_token = *it;
-				if (client.version != NEW_VERSION) {
+				if (client.version == VERSION_0 || client.version == VERSION_1 && _base.command_id == BULLETIN_NOTIFY) {
 					if (!Send(client.sockfd_, _base)) {
 						OnSendFailed(_base);
 					}
@@ -813,7 +813,7 @@ void ConnectionServer::ProcessIMChat_fromRoute(PDUBase &_base) {
 			_base.seq_id = 0;
 			im_notify.release_imchat();
 			
-			if (target.version == NEW_VERSION) {//save send msg for waiting ack
+			if (target.version == VERSION_0) {//save send msg for waiting ack
 				
 				need_send_msg(im.target_user_id(), target.sockfd_, _base,im.msg_id());
 			
@@ -925,6 +925,7 @@ void ConnectionServer::ConsumeHistoryMessage(UserId_t _userid) {
     std::shared_ptr<char> base64_data(new char[4096], carray_deleter);
     PDUBase base;
 	std::list<std::string> encode_imlist;
+	//msg type: offline chat msg  and user timeout recv msg
 	if (redis_client.GetOfflineIMList(_userid, encode_imlist)) {
 
 		LOGD("user_id(%d) have %d offline chatmsg", _userid, encode_imlist.size());
@@ -943,14 +944,14 @@ void ConnectionServer::ConsumeHistoryMessage(UserId_t _userid) {
 				}
 				const IMChat_Personal& im = im_notify.imchat();*/
 
-				if (client.version != NEW_VERSION) {
+				if (client.version == VERSION_0) {
 					if (!Send(client.sockfd_, base)) {
 						OnSendFailed(base);
 					}
 				}
 				else {
 					uint64_t msg_id = 0;
-					if (base.command_id == IMCHAT_PERSONAL_NOTIFY) {
+					if (base.command_id == IMCHAT_PERSONAL || base.command_id == IMCHAT_PERSONAL_NOTIFY) {
 						IMChat_Personal_Notify im_notify;
 						if (!im_notify.ParseFromArray(base.body.get(), base.length)) {
 							LOGERROR(base.command_id, base.seq_id, "ConsumeHistoryMessage包解析错误");
@@ -1036,7 +1037,7 @@ void ConnectionServer::ConsumeHistoryMessage(UserId_t _userid) {
 			else {
 				_pack.command_id = atoi(root["CommandId"].asString().c_str());
 			}
-			if (client.version != NEW_VERSION) {
+			if (client.version == VERSION_0 || client.version==VERSION_1 && cmd == BULLETIN) {
 				if (!Send(client.sockfd_, _pack)) {
 					OnSendFailed(_pack);
 				}
@@ -1134,7 +1135,8 @@ bool ConnectionServer::need_send_msg(int _userid, int _sockfd, PDUBase& _base, u
 {
 	ClientObject* target;
 	if (!find_client_by_userid(_userid, target)) {
-		return;
+        LOGE("not find user_id(%d),send fail",_userid);
+		return false;
 	}
 
 	Ackmsg* ackmsg = new Ackmsg(msg_id, _base);
@@ -1236,7 +1238,8 @@ void ConnectionServer::ack_timeout_handler(int user_id)
 	if (find_client_by_userid(user_id, object)) {
 		int cur_time = time(0);
 		//if recv ack inner MSG_ACK_TIME return
-		 if (cur_time - object->ack_time < MSG_ACK_TIME ) {
+		 if (get_mstime() - object->ack_time < MSG_ACK_TIME*1000 ) {
+            LOGD("recv ack inner timeout"); 
 			return;
 		}
 		 else if (cur_time - object->online_time < MSG_ACK_TIME && object->send_pending==1) {// user online ,but not recv ack send again
