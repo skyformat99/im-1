@@ -815,16 +815,14 @@ void ConnectionServer::ProcessIMChat_fromRoute(PDUBase &_base) {
 			im_notify.release_imchat();
 			
 			if (target.version == VERSION_0) {//save send msg for waiting ack
-				
-				need_send_msg(im.target_user_id(), target.sockfd_, _base,im.msg_id());
-			
-				return;
-			}
-			else {
 				if (Send(target.sockfd_, _base)) {
 					return;
 				}
-
+				
+			}
+			else {
+				need_send_msg(im.target_user_id(), target.sockfd_, _base, im.msg_id());
+				return;
 			}
         } 
     } 
