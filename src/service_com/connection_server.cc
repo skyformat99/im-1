@@ -76,7 +76,7 @@ int ConnectionServer::init()
 	m_storage_msg_works = new ThreadPool(1);//save msg redis;
     sleep(1);
 	if (route_client_.Connect(route_ip_.c_str(), route_port_)) {
-		LOGE("connect route server fail");
+		LOGE("connect route server(%s:%d) fail",route_ip_.c_str(),route_port_);
 		return -1;
 	}
 	if (loadbalance_client_.Connect(loadbalance_ip_.c_str(), loadbalance_port_)) {
@@ -416,6 +416,7 @@ void ConnectionServer::ProcessIMChat_Personal(int _sockfd, PDUBase&  _base) {
 	}
 
 
+    LOGD("time:%ld",im.timestamp());
 	// 以服务器收到消息的时间为准
 	im.set_timestamp(TimeUtil::timestamp_int());
 	uint64_t msg_id = getMsgId();

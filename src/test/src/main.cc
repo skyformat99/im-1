@@ -21,7 +21,7 @@ void SyncUserData(std::list<std::string>& _keys) {
 	if (_keys.size() == 0) return;
 
 	for (auto it = _keys.begin(); it != _keys.end(); it++) {
-        if(num++==2200){
+        if(num++==300){
             break;
         }
 		std::string phone = (*it).substr((*it).find(":") + 1);;
@@ -46,12 +46,12 @@ void SyncUserData(std::list<std::string>& _keys) {
 
 
 int main(int argc,char** argv) {
-    if(argc<3){
-        printf("please input ip and port\n");
+    if(argc<5){
+        printf("please input com ip and port,usage: imtest comip comport redisip password\n");
         return 0;
     }
-    char ip[]="192.168.0.14";
-    char auth[]="ym1234";
+    char* ip=argv[3];
+    char* auth=argv[4];
     redis_client.Init_Pool(ip,6380,auth,1);
 	std::list<std::string> keys;
 

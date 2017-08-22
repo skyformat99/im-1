@@ -3,9 +3,43 @@
 #include <log_util.h>
 #include <unistd.h>
 #include <thread>
+#include <vector>
+#include <signal.h>
+#include <algorithm>
+#include <sys/time.h>
 using namespace com::proto::bulletin;
 extern std::vector<User*> g_recv_users;
 extern IMClient client;
+vector<int> vi;
+void statistic(int signo){
+    printf("recv sig:%d\n",signo);
+    //sort(vi.begin(),vi.end(),[](int a,int b){return a>b;});
+
+    vector<int> res(10,0);
+    
+    for(int i=0;i<10000000;i++){
+        if(i<1000){
+            res[0]+=vi[i];
+        }
+        else if(i>=1000 && i<10000){
+            res[1]+=vi[i];
+        }
+        else if(i>=10000 && i<100000){
+            res[2]+=vi[i];
+        }
+        else if(i>=100000 && i<500000){
+            res[3]+=vi[i];
+        }
+        else if(i>=500000 && i<1000000){
+            res[4]+=vi[i];
+        }
+        else{
+            res[5]+=vi[i];
+        }
+    }
+    printf("<0 ms:%d ,1-10ms:%d ,10-100ms:%d,100-500ms:%d,500-1000ms:%d,>1s:%d\n",res[0],res[1],res[2],res[3],res[4],res[5]);
+    
+}
 void count() {
 	int sec_recv_pkt = 0;
 	while (1) {
@@ -21,6 +55,11 @@ IMClient::IMClient()
 	m_num = 0;
 	total_recv_pkts = 0;
 	m_login = 0;
+    vi.resize(10000000);
+    for(int i=0;i<10000000;i++){
+        vi[i]=0;
+    }
+    signal(SIGINT,statistic);
 }
 
 IMClient::~IMClient()
@@ -128,6 +167,18 @@ void IMClient::chatMsg(int _sockfd,PDUBase & _base)
 		//ReplyChatResult(_sockfd, _base, ERRNO_CODE_INVALID_IM_CHAT_EMPTY_BODY_NOT_ALLOWED);
 		//return;
 	}
+    struct timeval start;
+   gettimeofday(&start,0);
+   if(im.has_send_crc() && im.has_version()){
+   long long nm=((long long)start.tv_sec)*1000000+start.tv_usec;
+   int delay=nm-(((long long)im.send_crc())*1000000+im.version());
+   //printf("cur sec:%d nm:%d,send sec:%d,nm:%d\n",start.tv_sec,start.tv_usec,im.send_crc(),im.version());
+    if(delay<0){
+       delay=0;
+   }
+   vi[delay]=++vi[delay];
+   }
+   
    auto it=m_sock_userid.find(_sockfd);
     //printf("user_id:%d,body:%s\n",it->second,im.body().c_str());
 	++total_recv_pkts;
