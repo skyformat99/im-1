@@ -209,7 +209,7 @@ int ConnectionServer::PreProcessPack(int _sockfd, int _userid, PDUBase &_base) {
 			socket_userid_[_sockfd] = client.userid_;
 		}
 		if (status == OnlineStatus_Offline) {
-			LOGD("命中缓存，但处于离线状态，重置为在线 user[user_id:%d,phone:%s]", _userid, client.phone_.c_str());
+			LOGD("命中缓存，但处于离线状态，重置为在线 user[user_id:%d,phone:%s,fd:%d]", _userid, client.phone_.c_str(), _sockfd);
             ++onliners_;
 			
 		}
@@ -335,7 +335,7 @@ void ConnectionServer::ProcessUserLogin(int _sockfd, PDUBase& _base) {
 	login_ack.set_errer_no((ERRNO_CODE)login_result);
 	ResetPackBody(_base, login_ack, USER_LOGIN_ACK);
 	Send(_sockfd, _base);
-	LOGD("---------->user [userid:%d, phone:%s, sessionid:%s] login(%d) version(%d)------loginers[%d]--user_map[%d]------->", login.user_id(), login.phone().c_str(), login.session_id().c_str(),login_result,version, (int)onliners_, user_map_.size());
+	LOGD("---------->user [userid:%d, phone:%s, sessionid:%s,fd:%d] login(%d) version(%d)------loginers[%d]--user_map[%d]------->", login.user_id(), login.phone().c_str(),  login.session_id().c_str(), _sockfd, login_result,version, (int)onliners_, user_map_.size());
 	//LOGI("~~~结束处理用户登录timestamp:%d~~~", TimeUtil::timestamp_int());
 }
 
@@ -1438,7 +1438,7 @@ void ConnectionServer::LoginUtil(Socketfd_t _sockfd, UserId_t _userid) {
     ++onliners_;
 	RegistUserToRoute(client_object);
 
-	LOGD("----------------------->user[user_id:%d,phone:%s] offline reconnect and login--------loginers[%d]-user_map[%d]--------->", _userid, phone.c_str(),(int)onliners_,user_map_.size());
+	LOGD("----------------------->user[user_id:%d,phone:%s,fd:%d] offline reconnect and login--------loginers[%d]-user_map[%d]--------->", _userid, phone.c_str(), _sockfd,(int)onliners_,user_map_.size());
 }
 
 void ConnectionServer::ServiceInfo() {
