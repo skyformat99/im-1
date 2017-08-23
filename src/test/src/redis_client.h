@@ -6,7 +6,7 @@
 #include <mutex>
 #include "hredis_base.h"
 #include <pthread.h>
-
+#include <vector>
 // redis key的过期时间(单位秒，默认2个月)
 #define REDIS_KEY_EXPIRE_DEFAULT 5184000
 
@@ -30,7 +30,7 @@ public:
     bool InsertOfflineIMtoRedis(int _userid, const char *_encode_im);
     bool GetUserSessionList(int _userid, std::list<std::string> &_session_list);
     bool GetOfflineIMList(int _userid, std::list<std::string> &_encode_imlist);
-    bool GetIMUserList(std::list<std::string> &_keys);
+    bool GetIMUserList(std::vector<std::string> &_keys);
 
     std::string GetUserId(std::string _phone);
     std::string GetSessionId(std::string _phone);

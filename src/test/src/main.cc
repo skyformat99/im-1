@@ -21,7 +21,7 @@ void SyncUserData(std::list<std::string>& _keys) {
 	if (_keys.size() == 0) return;
 
 	for (auto it = _keys.begin(); it != _keys.end(); it++) {
-        if(num++==300){
+        if(num++==2200){
             break;
         }
 		std::string phone = (*it).substr((*it).find(":") + 1);;
@@ -38,7 +38,7 @@ void SyncUserData(std::list<std::string>& _keys) {
 			user->name = "";
 			user->passwd = "";
 			user->sessid = redis_client.GetSessionId(phone);
-			g_users.push_back(user);
+			g_recv_users.push_back(user);
 			//LOGD("正在同步数据库，userid:%s, phone:%s", userid.c_str(), phone.c_str());
 		}
 	}
@@ -53,14 +53,12 @@ int main(int argc,char** argv) {
     char* ip=argv[3];
     char* auth=argv[4];
     redis_client.Init_Pool(ip,6380,auth,1);
-	std::list<std::string> keys;
+	std::vector<std::string> keys;
 
 	redis_client.GetIMUserList(keys);
 	LOGI("total user:%d", keys.size());
 
 	
-	SyncUserData(keys);
-	LOGD("sync success ,total users:%d", g_users.size());
 	int pagesize;
     printf("pagesize:\n");
 	scanf("%d", &pagesize);
@@ -68,7 +66,12 @@ int main(int argc,char** argv) {
     printf("start pagenum:\n");
 	scanf("%d", &pagenum);
     printf("pagenum=%d\n",pagenum);
-	copy(g_users.begin() + pagesize*(pagenum - 1), g_users.begin() + pagesize*pagenum, back_inserter(g_recv_users));
+
+    std::list<std::string> ls(keys.begin()+pagesize*(pagenum - 1), keys.begin() + pagesize*pagenum);
+	SyncUserData(ls);
+	LOGD("sync success ,total users:%d", g_recv_users.size());
+
+	//copy(g_users.begin() + pagesize*(pagenum - 1), g_users.begin() + pagesize*pagenum, back_inserter(g_recv_users));
 	printf("recv user:%d", g_recv_users.size());
 	printf("begin connection....\n");
 	sleep(1);

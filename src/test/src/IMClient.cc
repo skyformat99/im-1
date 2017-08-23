@@ -33,11 +33,17 @@ void statistic(int signo){
         else if(i>=500000 && i<1000000){
             res[4]+=vi[i];
         }
-        else{
+        else if(i>=1000000 && i<2000000){
             res[5]+=vi[i];
         }
+        else if(i>=2000000 && i<3000000){
+            res[6]+=vi[i];
+        }
+        else {
+            res[7]+=vi[i];
+        }
     }
-    printf("<0 ms:%d ,1-10ms:%d ,10-100ms:%d,100-500ms:%d,500-1000ms:%d,>1s:%d\n",res[0],res[1],res[2],res[3],res[4],res[5]);
+    printf("<0 ms:%d ,1-10ms:%d ,10-100ms:%d,100-500ms:%d,500-1000ms:%d,1-2s:%d,2-3s:%d,>3s:%d\n",res[0],res[1],res[2],res[3],res[4],res[5],res[6],res[7]);
     
 }
 void count() {

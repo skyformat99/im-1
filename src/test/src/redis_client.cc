@@ -79,17 +79,18 @@ redisContext * RedisClient::getConnect()
 
 
 
-bool RedisClient::GetIMUserList(std::list<std::string> &_keys) {
+bool RedisClient::GetIMUserList(std::vector<std::string> &keys) {
     redisContext *context = NULL;
     std::string hash_name = "ImUser:*";
     bool bValue = false;
-
+    std::list<std::string> _keys;
 	context = getConnect();
 	if (context) {
 		if (SelectDB(context, DB_INDEX_IMUSER)) {
 			GetKeysFromHash(context, hash_name.c_str(), _keys);
 			if (_keys.size() > 0) {
 				bValue = true;
+                copy(_keys.begin(),_keys.end(),back_inserter(keys));
 			}
 		}
 	}
