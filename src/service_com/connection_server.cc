@@ -482,6 +482,7 @@ void ConnectionServer::ProcessIMChat_Personal(int _sockfd, PDUBase&  _base) {
 		ReplyChatResult(_sockfd, _base, (ERRNO_CODE)errno_code,false,msg_id);
 		//return;
 	}
+    //return;
 	//LOGDEBUG(_base.command_id, _base.seq_id, "消息入Redis库");
 	SaveIMObject*  object = new SaveIMObject;
 	object->id_ = msg_id;
@@ -868,6 +869,14 @@ int ConnectionServer::BuildUserCacheInfo(int _sockfd, User_Login& _login,int ver
     }
 
 	ClientObject client;
+    if(find_client_by_userid(_login.user_id(), client)) {
+        if(client.online_status_ == OnlineStatus_Connect){
+			LOGD("relogin user[user_id:%d ,phone:%s", client.userid_, client.phone_.c_str());
+            CloseFd(client.sockfd_);
+            std::lock_guard<std::recursive_mutex> lock_1(socket_userid_mutex_);
+            socket_userid_.erase(client.sockfd_);
+        }
+    }
   
 	client.sockfd_ = _sockfd;
 	client.userid_ = _login.user_id();
@@ -886,9 +895,6 @@ int ConnectionServer::BuildUserCacheInfo(int _sockfd, User_Login& _login,int ver
     }
     {
         std::lock_guard<std::recursive_mutex> lock_1(user_map_mutex_);
-		if (OnlineStatus_Connect == get_user_state(client.userid_)) {
-			LOGD("relogin user[user_id:%d ,phone:%s", client.userid_, client.phone_.c_str());
-		}
         user_map_[_login.user_id()] = client;
     }
 	RegistUserToRoute(client);
