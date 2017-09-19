@@ -891,15 +891,15 @@ int ConnectionServer::BuildUserCacheInfo(int _sockfd, User_Login& _login,int ver
         return ERRNO_CODE_ERR_SESSIONID;
     }
 	string device_id =  _login.device_id();
-	int device_type = _login.has_new_device() ? _login.new_device() : DeviceType_UNKNOWN;
+	int device_type = _login.has_device_type() ? _login.device_type() : DeviceType_UNKNOWN;
 	ClientObject client;
 	bool relogin = false;
     if(find_client_by_userid(_login.user_id(), client)) {
         if(client.online_status_ == OnlineStatus_Connect ){
 			relogin = true;
-			if(client.device_id_!= divice_id)
+			if(client.device_id_!= device_id && client.version>VERSION_0)
 			{
-				LOGD("kicked user[user_id:%d ,phone:%s] by [%s :%d]", client.userid_, client.phone_.c_str(), divice_id, device_type);
+				LOGD("kicked user[user_id:%d,phone:%s] by [%s :%d]", client.userid_, client.phone_.c_str(), device_id.c_str(), device_type);
 				KickedNotify(client.userid_, client.sockfd_, device_id, device_type);
 				
 			}
