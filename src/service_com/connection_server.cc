@@ -331,17 +331,18 @@ void ConnectionServer::ProcessUserLogin(int _sockfd, PDUBase& _base) {
     }
 	//int login_result=ERRNO_CODE_OK;
 	int login_result = BuildUserCacheInfo(_sockfd, login,version);
-	if (login_result == ERRNO_CODE_OK) {
-		ResendFailedPack(_sockfd, login.user_id());
-		ConsumeHistoryMessage(login.user_id());
-		++onliners_;
-	}
-	
+
 	//LOGD("回复登录结果 %d", login_result);
 	User_Login_Ack login_ack;
 	login_ack.set_errer_no((ERRNO_CODE)login_result);
 	ResetPackBody(_base, login_ack, USER_LOGIN_ACK);
 	Send(_sockfd, _base);
+	//send offline msg
+	if (login_result == ERRNO_CODE_OK) {
+		ResendFailedPack(_sockfd, login.user_id());
+		ConsumeHistoryMessage(login.user_id());
+		++onliners_;
+	}
 	LOGD("---------->user [userid:%d, phone:%s, sessionid:%s,fd:%d] login(%d) version(%d)------loginers[%d]--user_map[%d]------->", login.user_id(), login.phone().c_str(),  login.session_id().c_str(), _sockfd, login_result,version, (int)onliners_, user_map_.size());
 	//LOGI("~~~结束处理用户登录timestamp:%d~~~", TimeUtil::timestamp_int());
 }
@@ -353,7 +354,6 @@ void ConnectionServer::ProcessUserLogout(int _sockfd, PDUBase & _base)
 		LOGERROR(_base.command_id, _base.seq_id, "user logout pkt parse fail");
 		return;
 	}
-	
 	int userid;
 	find_userid_by_sockfd(_sockfd, userid, true);
 	userid = logout.user_id();
