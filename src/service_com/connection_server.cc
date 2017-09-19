@@ -206,7 +206,7 @@ int ConnectionServer::PreProcessPack(int _sockfd, int _userid, PDUBase &_base) {
 		else if (status == OnlineStatus_Connect) {
 			//if new version ,we don't relogin from here
 			if (client.version > VERSION_0) {
-				return;
+				return 0;
 			}
 			if (old_user_sockfd != 0 && old_user_sockfd != _sockfd) {
 				{
