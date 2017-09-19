@@ -23,6 +23,7 @@ message User_Login_Ack {
     optional string error = 4;
 }
 
+
 message Multi_Device_Kicked_Notify {
 	optional int32 timestamp =1;
     optional com.proto.basic.Device_Type new_device = 2 ;

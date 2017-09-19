@@ -378,6 +378,19 @@ void ConnectionServer::ProcessUserLogout(int _sockfd, PDUBase & _base)
 	CloseFd(_sockfd);
 }
 
+void ConnectionServer::KickedNotify(UserId_t _userid,int sockfd, std::string device_id, int device_type)
+{
+	Multi_Device_Kicked_Notify notify;
+	notify.set_timestamp(time(NULL));
+	notify.set_user_id(_userid);
+	notify.set_new_device((Device_Type)device_type);
+	notify.set_new_device_id(device_id);
+	PDUBase pdu;
+	pdu.terminal_token = _userid;
+	ResetPackBody(pdu, notify, MULTI_DEVICE_KICKED_NOTIFY);
+	Send(sockfd, pdu);
+}
+
 /*
 * 处理用户发送的IM消息
 * 注意：用户发送消息时只有自己的userid和对方的手机号，所以其他信息需要查询获得
@@ -855,12 +868,17 @@ int ConnectionServer::BuildUserCacheInfo(int _sockfd, User_Login& _login,int ver
     if (!_login.has_user_id() || _login.user_id() <= 0) {
         return ERRNO_CODE_USER_ID_ERROR;
     }
-    if (!_login.has_session_id()) {
-        return ERRNO_CODE_NOT_SESSIONID;
-    }
+	if (!_login.has_session_id()) {
+		return ERRNO_CODE_NOT_SESSIONID;
+
+	}
+	if (!_login.has_device_id()) {
+		return ERRNO_CODE_NOT_DEVICE_ID;
+	}
     if (!redis_client.IsHuxinUser(_login.phone())) {
         return ERRNO_CODE_NOT_HUXIN_USER;
     }
+	
 
     std::string userid = redis_client.GetUserId(_login.phone());
     if (userid != std::to_string(_login.user_id())) {
@@ -872,16 +890,23 @@ int ConnectionServer::BuildUserCacheInfo(int _sockfd, User_Login& _login,int ver
         LOGE("用户登录sessionid不匹配，%s %s", _login.session_id().c_str(), sessid.c_str());
         return ERRNO_CODE_ERR_SESSIONID;
     }
-
+	string device_id =  _login.device_id();
+	int device_type = _login.has_new_device() ? _login.new_device() : DeviceType_UNKNOWN;
 	ClientObject client;
+	bool relogin = false;
     if(find_client_by_userid(_login.user_id(), client)) {
-        if(client.online_status_ == OnlineStatus_Connect){
-			LOGD("relogin user[user_id:%d ,phone:%s", client.userid_, client.phone_.c_str());
+        if(client.online_status_ == OnlineStatus_Connect ){
+			relogin = true;
+			if(client.device_id_!= divice_id)
 			{
+				LOGD("kicked user[user_id:%d ,phone:%s] by [%s :%d]", client.userid_, client.phone_.c_str(), divice_id, device_type);
+				KickedNotify(client.userid_, client.sockfd_, device_id, device_type);
+				
+			}
+			if (client.sockfd_ != _sockfd) {
 				std::lock_guard<std::recursive_mutex> lock_1(socket_userid_mutex_);
 				socket_userid_.erase(client.sockfd_);
 			}
-			CloseFd(client.sockfd_);
         }
     }
   
@@ -904,7 +929,10 @@ int ConnectionServer::BuildUserCacheInfo(int _sockfd, User_Login& _login,int ver
         std::lock_guard<std::recursive_mutex> lock_1(user_map_mutex_);
         user_map_[_login.user_id()] = client;
     }
-	++onliners_;
+	if (!relogin) {
+		++onliners_;
+	}
+	
 	RegistUserToRoute(client);
 
     return ERRNO_CODE_OK;
@@ -1176,8 +1204,6 @@ bool ConnectionServer::need_send_msg(int _userid, int _sockfd, PDUBase& _base, u
 			}
 			else if (it->second.empty()) {
 				it->second.push_back(ackmsg);
-				
-
 			}
 		}
 	}

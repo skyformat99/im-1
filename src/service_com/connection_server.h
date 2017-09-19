@@ -82,10 +82,14 @@ public:
     void RegistUsersToRoute();
     void ResendFailedPack(int _sockfd, UserId_t _userid);
     void ReplyChatResult(int _sockfd, PDUBase &_pack, ERRNO_CODE _code, bool is_target_online = false,uint64_t msg_id=0);
- 
+ // relation with login
     void ProcessHeartBeat(int _sockfd, PDUBase _pack);
     void ProcessUserLogin(int _sockfd, PDUBase&  _base);
 	void ProcessUserLogout(int _sockfd, PDUBase&  _base);
+	void KickedNotify(UserId_t _userid, int sockfd, std::string device_id, int device_type);
+
+
+	//msg
     void ProcessIMChat_Personal(int _sockfd, PDUBase& _base);
 
 	void ProcessChatMsg_ack(int _sockfd, PDUBase & _base);

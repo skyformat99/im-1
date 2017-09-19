@@ -207,7 +207,8 @@ enum ERRNO_CODE {
 	ERRNO_CODE_NOT_TOKEN_ID = 219; 		// 没有携带token id
 	ERRNO_CODE_NOT_SHOW = 220; 		// 没有找到对方的秀信息
 	ERRNO_CODE_NOT_HUXIN_USER = 403; 	// 非呼信用户
-
+    ERRNO_CODE_NOT_DEVICE_ID=404;          //没有设备id
+	
     ERRNO_CODE_BLOCKED_BY_DST_USER = 501;   //
 
     ERRNO_CODE_INVALID_USER_INFO = 1101;
