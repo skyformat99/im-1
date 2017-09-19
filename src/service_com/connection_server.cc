@@ -139,14 +139,15 @@ void ConnectionServer::OnConn(int _sockfd) {
 }
 
 void ConnectionServer::OnDisconn(int _sockfd) {
-
-	CloseFd(_sockfd);
-
+	
 	int userid = 0;
 	if (!find_userid_by_sockfd(_sockfd, userid, true)) {
 		LOGE("not find sockfd:%d", _sockfd);
+		CloseFd(_sockfd);
 		return;
 	}
+	//closing socket should after erased
+	CloseFd(_sockfd);
 	ClientObject client;
 	if (!find_client_by_userid(userid, client, true)) {
         LOGE("not find user_id:%d",userid);
@@ -197,8 +198,32 @@ int ConnectionServer::PreProcessPack(int _sockfd, int _userid, PDUBase &_base) {
 	if (find_client_by_userid(_userid, client)) {
 		old_user_sockfd = client.sockfd_;
         int status=client.online_status_;
+		
+		if (status == OnlineStatus_Offline) {
+			LOGD("命中缓存，但处于离线状态，重置为在线 user[user_id:%d,phone:%s,fd:%d]", _userid, client.phone_.c_str(), _sockfd);
+            ++onliners_;
+		}
+		else if (status == OnlineStatus_Connect) {
+			//if new version ,we don't relogin from here
+			if (client.version > VERSION_0) {
+				return;
+			}
+			if (old_user_sockfd != 0 && old_user_sockfd != _sockfd) {
+				{
+					std::lock_guard<std::recursive_mutex> lock_1(socket_userid_mutex_);
+					socket_userid_.erase(old_user_sockfd);
+				}
+				CloseFd(old_user_sockfd);
+				
+				LOGT("断线重连，关闭假死FD; user[user_id:%d; phone:%s],oldfd:%d; newfd:%d;", _userid, client.phone_.c_str(), old_user_sockfd, _sockfd);
+				
+			}
+			else {
+				return 0;
+			}
+		}
 		client.sockfd_ = _sockfd;
-        client.online_status_=OnlineStatus_Connect;
+		client.online_status_ = OnlineStatus_Connect;
 		client.online_time = time(0);
 		{
 			std::lock_guard<std::recursive_mutex> lock_1(user_map_mutex_);
@@ -207,24 +232,6 @@ int ConnectionServer::PreProcessPack(int _sockfd, int _userid, PDUBase &_base) {
 		{
 			std::lock_guard<std::recursive_mutex> lock_1(socket_userid_mutex_);
 			socket_userid_[_sockfd] = client.userid_;
-		}
-		if (status == OnlineStatus_Offline) {
-			LOGD("命中缓存，但处于离线状态，重置为在线 user[user_id:%d,phone:%s,fd:%d]", _userid, client.phone_.c_str(), _sockfd);
-            ++onliners_;
-			
-		}
-		else if (status == OnlineStatus_Connect) {
-			if (old_user_sockfd != 0 && old_user_sockfd != _sockfd) {
-				CloseFd(old_user_sockfd);
-				std::lock_guard<std::recursive_mutex> lock_1(socket_userid_mutex_);
-				socket_userid_.erase(old_user_sockfd);
-				
-				LOGT("断线重连，关闭假死FD; user[user_id:%d; phone:%s],oldfd:%d; newfd:%d;", _userid, client.phone_.c_str(), old_user_sockfd, _sockfd);
-				
-			}
-			else {
-				return 0;
-			}
 		}
 		RegistUserToRoute(client);
 	}
@@ -872,9 +879,11 @@ int ConnectionServer::BuildUserCacheInfo(int _sockfd, User_Login& _login,int ver
     if(find_client_by_userid(_login.user_id(), client)) {
         if(client.online_status_ == OnlineStatus_Connect){
 			LOGD("relogin user[user_id:%d ,phone:%s", client.userid_, client.phone_.c_str());
-            CloseFd(client.sockfd_);
-            std::lock_guard<std::recursive_mutex> lock_1(socket_userid_mutex_);
-            socket_userid_.erase(client.sockfd_);
+			{
+				std::lock_guard<std::recursive_mutex> lock_1(socket_userid_mutex_);
+				socket_userid_.erase(client.sockfd_);
+			}
+			CloseFd(client.sockfd_);
         }
     }
   

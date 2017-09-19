@@ -300,7 +300,7 @@ void TcpServer::CloseFd(int _sockfd) {
 
 void TcpServer::Accept(int listener)
 {
-	struct sockaddr_storage ss;
+	struct sockaddr_in ss;
 #ifdef WIN32
 	int slen = sizeof(ss);
 #else
@@ -321,7 +321,8 @@ void TcpServer::Accept(int listener)
             }
             return;
 	    }
-        LOGD("accept new connection fd(%d)",fd);
+		
+        LOGD("accept new connection [fd:%d,addr:%s:%d]",fd,inet_ntoa(ss.sin_addr),ntohs(ss.sin_port));
 		setnonblocking(fd);
 		anetKeepAlive(fd,6);
 		{
