@@ -156,20 +156,7 @@ void Transfer::ProcessBroadcast(int _sockfd, PDUBase & _base)
 				}
 			}
 			
-			//offline msg handler
-			/*auto it = m_msg_map.find(msg_id);
-			if (it == m_msg_map.end()) {
-			PDUBase* base = new PDUBase;
-			*base = _base;
-			BroadcastMsgInfo* msginfo = new BroadcastMsgInfo;
-			msginfo->expire = expire;
-			msginfo->broadcast = broadcast;
-			msginfo->pdu = base;
-			m_msg_map[msg_id] = msginfo;
-			}
-
-			user->push(msg_id,expire);*/
-
+            LOGD("save broadcast offline msg user_id(%d)",*it);
 			std::string userid = "userid:" + std::to_string(*it);
 			redis_client.InsertBroadcastOfflineIMtoRedis(userid, channel_msg);
 			
