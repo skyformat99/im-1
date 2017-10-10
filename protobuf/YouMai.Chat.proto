@@ -5,11 +5,6 @@ package com.proto.chat;
 
 import "YouMai.Basic.proto";
 
-enum IM_CHANNEL{
-    IM_CHANNEL_DEFAULT = 0;
-    IM_CHANNEL_SMS = 1;
-    IM_CHANNEL_QQ = 2;
-}
 
 enum IM_CONTENT_TYPE{
 	IM_CONTENT_TYPE_TEXT = 0;
@@ -30,31 +25,8 @@ enum IM_CONTENT_TYPE{
 	IM_CONTENT_TYPE_KAQUAN = 14;
 }
 
-message IMChat_Personal{
-    optional int32	command_id = 1;
-    optional int32	timestamp = 2;
-    optional int32	send_crc = 3;
-    optional int32	version = 4;
-    optional int64  msg_id = 5;
-
-    optional int32	src_usr_id = 6;
-    optional string src_phone = 7;
-    optional string src_name = 8;
-    optional int32	src_user_type = 9;
-
-    optional int32	target_user_id = 10;
-    optional string target_phone = 11;
-    optional string target_name = 12;
-    optional int32	target_user_type =13;
-    // 0:transmit 1:not transmit
-    optional IM_CHANNEL  im_channel = 14;
-    optional string body = 15 ;
-    optional int32 content_type = 16 ;//binary operation. binary operation together with IM_CONTENT_TYPE
-    optional int32 parentid = 17;
-}
-
 message IMChat_Personal_Notify{
-    optional IMChat_Personal imchat = 1;
+    optional com.proto.basic.ChatMsg imchat = 1;
 }
 
 message IMChat_Personal_Ack{

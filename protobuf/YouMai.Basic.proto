@@ -158,6 +158,31 @@ enum COMMANDID {
 //	REPRESENT_INSERT_ACK = 11092;
 //	REPRESENT_REVIEW = 11101;
 //	REPRESENT_REVIEW_ACK = 11102;
+
+//群
+    CID_GROUP_LIST_REQ = 0x6011;
+	CID_GROUP_LIST_RSP = 0x6012;
+	CID_GROUP_INFO_REQ = 0x6013;
+	CID_GROUP_INFO_RSP = 0x6014;
+	CID_GROUP_MEMBER_REQ = 0x6015;
+	CID_GROUP_MEMBER_RSP = 0x6016;
+	CID_GROUP_CREATE_REQ = 0x6017;
+	CID_GROUP_CREATE_RSP = 0x6018;
+	CID_GROUP_DISSOLVE_REQ = 0x6019;
+	CID_GROUP_DISSOLVE_RSP = 0x601a;
+	CID_GROUP_INFO_MODIFY_REQ = 0x601b;
+	CID_GROUP_INFO_MODIFY_RSP = 0x601c;
+	CID_GROUP_CHANGE_MEMBER_REQ = 0x601d;
+	CID_GROUP_CHANGE_MEMBER_RSP =0x601e;
+	
+	//消息
+	CID_GROUP_CHAT_MSG = 0x6021;
+	CID_GMSG_OFFLINE_NOTIFY = 0x6022;
+	CID_MSG_DATA_LIST_REQ = 0x6023;
+	CID_MSG_DATA_LIST_RSP = 0x6024;
+	CID_GROUP_CHAT_MSG_CANCEL = 0x6025;
+	
+	
 }
 
 enum USER_TYPE {
@@ -248,4 +273,78 @@ enum UserState{
 	USER_STATE_ONLINE=0;
 	USER_STATE_OFFLINE=1;
 	USER_STATE_LOGOUT=3;
+}
+
+enum ResultCode{
+	RESULT_CODE_SUCCESS=1;
+	RESULT_CODE_FAIL=2;
+}
+
+enum GroupMemberOptType{
+	GROUP_MEMBER_OPT_ADD=1;
+	GROUP_MEMBER_OPT_DEL=2;
+}
+enum IM_CHANNEL{
+    IM_CHANNEL_DEFAULT = 0;
+    IM_CHANNEL_SMS = 1;
+    IM_CHANNEL_QQ = 2;
+}
+
+message UserInfo{
+	optional int32	user_id =  1;
+	optional string phone  = 2 ;
+	optional string nick_name=3;
+	optional string avator=4;
+	optional int32  sex=5;
+	optional string sign=6;     //个性签名
+	optional bool   is_hx=20;   // true/false
+}
+
+message GroupMemberItem{
+	optional int32  member_id=1;
+	optional string member_name=2;
+	optional string member_avatar=3;
+}
+
+message GroupItem{
+	optional int32  group_id=1;
+	optional string group_name=2;
+	optional string member_avatar=3;
+}
+
+message GroupInfo{
+	optional int32    group_id=1;
+	optional string   group_name = 2;
+	optional string   group_avatar = 3; //头像
+	optional string   topic =4 ;
+	optional int32    update_time = 5;
+}
+
+message ChatMsg{
+    optional int32	command_id = 1;
+    optional int32	timestamp = 2;
+    optional int32	send_crc = 3;
+    optional int32	version = 4;
+    optional int64  msg_id = 5;
+
+    optional int32	src_usr_id = 6;
+    optional string src_phone = 7;
+    optional string src_name = 8;
+    optional int32	src_user_type = 9;
+
+    optional int32	target_user_id = 10;
+    optional string target_phone = 11;
+    optional string target_name = 12;
+    optional int32	target_user_type =13;
+    // 0:transmit 1:not transmit
+    optional IM_CHANNEL  im_channel = 14;
+    optional string body = 15 ;
+    optional int32 content_type = 16 ;//binary operation. binary operation together with IM_CONTENT_TYPE
+    optional int32 parentid = 17;
+}
+
+message OfflineMsgInfo{
+	optional int32	target_id = 1; //user_id 或group_id
+	optional int32	num = 2; //离线消息数量
+	repeated  ChatMsg  offline_msg_list = 3; //返回10条消息
 }

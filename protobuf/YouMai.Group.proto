@@ -1,0 +1,119 @@
+
+
+syntax = "proto2";
+
+package com.proto.group ;
+import "YouMai.Basic.proto";
+
+
+message GroupCreateReq {
+    optional int32    own_id = 1;      //创建者id
+    repeated int32    user_id_list = 2; //邀请添加用户
+	optional string   group_name = 3;
+	optional string   group_avatar = 4; //头像
+	optional string   topic =5 ;
+}
+
+message GroupCreateRsp {
+    optional int32    group_id = 1;     
+    optional int32    own_id = 2;      //创建者id
+    repeated int32    user_id_list = 3; //成功添加用户
+	optional int32    update_time=4;
+	optional com.proto.basic.ResultCode    result=10; 
+}
+
+message GroupCreateNotify {
+	optional int32    group_id = 1; 
+    optional int32    own_id = 2;      //创建者id
+    repeated int32    user_id_list = 3; //成功添加用户
+    optional int32    update_time=4;
+}
+
+message GroupDissolveReq {
+    optional int32    own_id = 1;      //创建者id
+    optional int32    group_id = 2; 
+}
+
+message GroupDissolveRsp {
+    optional int32    group_id = 1; 
+	optional com.proto.basic.ResultCode    result=10; 
+}
+
+message GroupDissolveNotify {
+	optional int32    group_id = 1; 
+}
+
+// 添加/删除群成员
+message GroupMemberChangeReq {
+	optional int32 user_id=1;
+	optional int32 group_id = 2;      
+	repeated int32 user_id_list = 3; 
+	optional com.proto.basic.GroupMemberOptType   type=4;
+}
+
+message GroupMemberChangeRsp {
+	optional int32 group_id = 1;      
+	repeated int32 user_id_list = 2; 
+	optional com.proto.basic.GroupMemberOptType   type=3;
+}
+
+message GroupMemberChangeNotify {
+	optional int32 group_id = 1;      
+	repeated int32 user_id_list = 2; 
+	optional com.proto.basic.GroupMemberOptType   type=3;
+}
+
+//获取群列表
+message GroupListReq {
+	optional int32 user_id=1;
+}
+
+message GroupListRsp {
+	optional int32 user_id=1;
+	repeated com.proto.basic.GroupItem group_item_list = 2;
+	optional com.proto.basic.ResultCode    result=10; 
+}
+
+//获取群成员
+message GroupMemberReq {
+	optional int32 group_id=1;
+	optional int32 update_time = 2;
+}
+
+message GroupMemberRsp {
+	optional int32 group_id=1;
+	repeated com.proto.basic.GroupMemberItem member_list = 2;
+	optional int32 update_time = 3;
+	optional com.proto.basic.ResultCode    result=10;
+}
+
+// 获取群详细信息
+message GroupInfoReq {
+	optional int32 group_id=1;
+	optional int32 update_time = 2;
+}
+
+message GroupInfoRsp {
+    optional com.proto.basic.GroupInfo  group_info= 1;
+}
+
+
+// 群消息
+message GroupChatMsg{
+    optional com.proto.basic.ChatMsg imchat = 1;
+}
+
+message GroupOfflineMsgNotify {
+    repeated com.proto.basic.OfflineMsgInfo  offline_msg_list= 1; 
+}
+
+message GroupHistoryMsgReq{
+	optional int32 user_id=1;
+	optional int32 group_id = 2;  
+	optional int32 latest_time = 3;
+}
+
+message GroupHistoryMsgRsp{
+	optional int32 group_id = 1; 
+	repeated com.proto.basic.ChatMsg history_msg_list = 2; //每次查询最多30条
+}
