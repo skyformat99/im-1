@@ -49,13 +49,11 @@ message User_LogOff_Ack {
 message RosterInfoReq{
 	optional int32  user_id=1;
 	repeated string user_phone_list =2;
-	optional int32 version=3;   //如果首次上传设为0，对服务器端电话号码进行覆盖 
 }
 
 message RosterInfoRsp{
 	optional int32     user_id=1;
 	repeated  com.proto.basic.UserInfo user_info_list=2;
-	optional int32     version=3;
 }
 
 // ************************查看用户信息***************
